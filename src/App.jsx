@@ -1,22 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
-// Layouts
-//import MainLayout from './components/layout/MainLayout';
-
-// Pages (Features)
-import EmployeeDashboard from './features/dashboard/EmployeeDashboard';
-//import AttendanceHistory from './features/attendance/AttendanceHistory';
-// import Login from './features/auth/Login'; 
+import { Routes, Route, Navigate } from "react-router-dom";
+import Landing from "./pages/Landing.jsx";
+import EmployeeDashboard from "./features/dashboard/EmployeeDashboard.jsx";
 
 function App() {
-    // In a real app, this would come from a useAuth() hook or Global State
-
-
     return (
-         <>
-             <EmployeeDashboard/>
-         </>
+        <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/employee" element={<EmployeeDashboard />} />
+
+            {/* temp routes until you create pages */}
+            <Route path="/login" element={<div className="p-6 text-white">Login page</div>} />
+            <Route path="/register" element={<div className="p-6 text-white">Register page</div>} />
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
     );
 }
 
