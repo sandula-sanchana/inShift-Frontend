@@ -23,11 +23,7 @@ export default function Login() {
     setErr("");
     setLoading(true);
     try {
-      // If your backend exists later, replace with:
-      // const { data } = await api.post("/auth/login", { email, password });
-      // setSession(data.token, data.user);
 
-      // For now, keep UI usable without backend (no fake data tables — just session)
       const user = demoUser(role);
       const token = "demo-token";
       setSession(token, user);

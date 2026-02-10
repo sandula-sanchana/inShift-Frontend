@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { SectionTitle } from "../components/common/SectionTitle";
 import { Badge } from "../components/ui/Badge";
 import { CalendarDays, Clock3, Bell, ShieldCheck, Fingerprint, MapPin } from "lucide-react";
-// import { authStore } from "../features/auth/store";
+import { authStore } from "../features/auth/store";
 import { EmptyState } from "../components/common/EmptyState";
 import { useToast } from "../components/ui/Toast";
 

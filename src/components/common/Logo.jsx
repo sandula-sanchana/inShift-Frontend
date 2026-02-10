@@ -1,5 +1,5 @@
 import React from "react";
-import inshift_logo from "../../assets/logo/inshift_logo.png";
+import inshift_logo from "../../assets/logo/inshi_logo.png";
 
 export function LogoMark({ size = 60 }) {
   return (

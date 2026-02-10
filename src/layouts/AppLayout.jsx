@@ -60,7 +60,7 @@ export default function AppLayout() {
   }, [role]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-auto bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
