@@ -10,7 +10,7 @@ export function LogoMark({ size = 60 }) {
       <img
           src={inshift_logo}
           alt="InShift Logo"
-          className=""
+          className="flex items-center justify-center"
       />
     </span>
   );
