@@ -1,10 +1,8 @@
-import firebase from "firebase/compat/app";
+/* global importScripts, firebase, clients, self */
 
+importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
 
-// eslint-disable-next-line no-undef
-importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
-// eslint-disable-next-line no-undef
-importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js");
 
 firebase.initializeApp({
     apiKey: "AIzaSyBXgUWgOqXOgcfR28_AU5NdzdKSi6iOd7g",
@@ -15,48 +13,36 @@ firebase.initializeApp({
     appId: "1:311906880354:web:c77d8c6679baa08db33a3b"
 });
 
-const messaging = firebase.messaging();
+var messaging = firebase.messaging();
 
+messaging.onBackgroundMessage(function (payload) {
+    var title = (payload && payload.notification && payload.notification.title) ? payload.notification.title : "InShift";
+    var body  = (payload && payload.notification && payload.notification.body) ? payload.notification.body : "";
 
-// BACKGROUND NOTIFICATIONS
-
-
-messaging.onBackgroundMessage((payload) => {
-
-    const title = payload?.notification?.title ?? "InShift";
-    const body = payload?.notification?.body ?? "";
-
-    // 🔥 backend send this
-
-    const url = payload?.data?.url ?? "/app/notifications";
+    var url = (payload && payload.data && payload.data.url) ? payload.data.url : "/app/notifications";
 
     self.registration.showNotification(title, {
-        body,
-        data: { url }
+        body: body,
+        data: { url: url }
     });
 });
 
-
-// CLICK → OPEN PAGE
-
-self.addEventListener("notificationclick", (event) => {
-
+self.addEventListener("notificationclick", function (event) {
     event.notification.close();
-
-    const url = event.notification?.data?.url ?? "/app/notifications";
+    var url = (event.notification && event.notification.data && event.notification.data.url)
+        ? event.notification.data.url
+        : "/app/notifications";
 
     event.waitUntil(
-        clients.matchAll({ type: "window", includeUncontrolled: true })
-            .then((clientList) => {
-
-                for (const client of clientList) {
-                    if (client.url.includes("/app") && "focus" in client) {
-                        client.postMessage({ type: "NAVIGATE", url });
-                        return client.focus();
-                    }
+        clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
+            for (var i = 0; i < clientList.length; i++) {
+                var client = clientList[i];
+                if ("focus" in client) {
+                    client.postMessage({ type: "NAVIGATE", url: url });
+                    return client.focus();
                 }
-
-                return clients.openWindow(url);
-            })
+            }
+            return clients.openWindow(url);
+        })
     );
 });
