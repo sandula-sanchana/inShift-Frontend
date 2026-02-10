@@ -1,13 +1,17 @@
 import React from "react";
-import { ShieldCheck } from "lucide-react";
+import inshift_logo from "../../assets/logo/inshift_logo.png";
 
-export function LogoMark({ size = 36 }) {
+export function LogoMark({ size = 60 }) {
   return (
-    <span
-      className="inline-flex items-center justify-center rounded-2xl bg-slate-900 text-white shadow-soft"
-      style={{ width: size, height: size }}
-    >
-      <ShieldCheck className="h-5 w-5" />
+      <span
+          className="inline-flex items-center justify-center rounded-2xl bg-slate-900 shadow-soft overflow-hidden"
+          style={{ width: 200, height: size }}
+      >
+      <img
+          src={inshift_logo}
+          alt="InShift Logo"
+          className=""
+      />
     </span>
   );
 }

@@ -8,7 +8,6 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/employee" element={<EmployeeDashboard />} />
 
-            {/* temp routes until you create pages */}
             <Route path="/login" element={<div className="p-6 text-white">Login page</div>} />
             <Route path="/register" element={<div className="p-6 text-white">Register page</div>} />
 

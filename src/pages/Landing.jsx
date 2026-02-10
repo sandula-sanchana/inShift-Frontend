@@ -51,21 +51,23 @@ function Section({ id, className = "", children }) {
 
 function FeatureCard({ icon, title, desc }) {
   return (
-      <div className="group rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7 transition hover:bg-white/10">
+      <div className="group rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7
+                    transition duration-300 hover:-translate-y-1 hover:bg-white/10
+                    hover:shadow-[0_20px_80px_rgba(99,102,241,0.18)]">
         <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10">
+          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10
+                        transition group-hover:scale-105 group-hover:bg-white/15">
             {icon}
           </div>
           <div>
             <div className="text-lg font-semibold text-white">{title}</div>
-            <div className="mt-1 text-sm text-slate-300 leading-relaxed">
-              {desc}
-            </div>
+            <div className="mt-1 text-sm text-slate-300 leading-relaxed">{desc}</div>
           </div>
         </div>
       </div>
   );
 }
+
 
 function Pill({ children }) {
   return (
@@ -300,8 +302,8 @@ export default function Landing() {
               <Link to="/" className="flex items-center gap-3">
                 <LogoMark />
                 <div className="leading-tight">
-                  <div className="text-sm font-semibold">InShift</div>
-                  <div className="text-xs text-slate-300">Smart Attendance</div>
+                  {/*<div className="text-sm font-semibold">InShift</div>*/}
+                  {/*<div className="text-xs text-slate-300">Smart Attendance</div>*/}
                 </div>
               </Link>
 

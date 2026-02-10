@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+    color-scheme: light;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Nice scrollbars (optional) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.18); border-radius: 999px; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.06); }
+
+/* Gradient text helper */
+.gradient-text {
+    background: linear-gradient(90deg, #0f172a 0%, #334155 40%, #0f172a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
