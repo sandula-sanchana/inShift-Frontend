@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, {useEffect, useMemo} from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { enableNotifications, listenForeground } from "../lib/fcm";
 import {
   Bell,
   LayoutDashboard,
@@ -17,6 +18,32 @@ import { LogoMark } from "../components/common/Logo";
 import { cn } from "../lib/cn";
 import { authStore } from "../features/auth/store";
 import { ToastHost, useToast } from "../components/ui/Toast";
+
+
+// eslint-disable-next-line react-hooks/rules-of-hooks
+useEffect(() => {
+
+  async function  setupFCM(){
+
+
+      try {
+        const permissions=await enableNotifications();
+
+        if (!permissions) return;
+
+        // await api.post("/notifications/fcm-token", {
+        //   token, device: navigator.userAgent
+        // });
+
+      }catch (err){
+          console.log("fcm error" + err)
+      }
+
+  }
+
+  setupFCM();
+
+}, []);
 
 function NavItem({ to, icon: Icon, label }) {
   return (
