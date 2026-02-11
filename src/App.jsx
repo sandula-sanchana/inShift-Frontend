@@ -4,7 +4,7 @@ import AppLayout from "./layouts/AppLayout.jsx";
 import Overview from "./pages/Overview.jsx";
 import EmployeeDashboard from "./features/dashboard/EmployeeDashboard.jsx";
 import Login from "./pages/auth_pages/Login.jsx";
-import {Register} from "./pages/auth_pages/Register.jsx";
+import Register from "./pages/auth_pages/Register.jsx";
 
 function App() {
     return (
