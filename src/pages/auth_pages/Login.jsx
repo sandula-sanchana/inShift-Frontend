@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import AuthShell from "./AuthShell";
-import { Input } from "../components/ui/Input";
-import { Button } from "../components/ui/Button";
-import { authStore } from "../features/auth/store";
-import { demoUser } from "../features/auth/demo";
-import { useToast } from "../components/ui/Toast";
-import { api } from "../lib/api";
+import AuthShell from "./AuthShell.jsx";
+import { Input } from "../../components/ui/Input.jsx";
+import { Button } from "../../components/ui/Button.jsx";
+import { authStore } from "../../features/auth/store.js";
+import { demoUser } from "../../features/auth/demo.js";
+import { useToast } from "../../components/ui/Toast.jsx";
+import { api } from "../../lib/api.js";
 
 export default function Login() {
   const nav = useNavigate();

@@ -1,7 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { LogoMark } from "../components/common/Logo";
+import { LogoMark } from "../../components/common/Logo.jsx";
 
 export default function AuthShell({ title, subtitle, children }) {
   return (

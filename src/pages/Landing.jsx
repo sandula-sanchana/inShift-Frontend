@@ -18,6 +18,8 @@ import {
 import { Button } from "../components/ui/Button";
 import { LogoMark } from "../components/common/Logo";
 
+// --- Components ---
+
 const fadeInUp = {
   hidden: { opacity: 0, y: 22 },
   show: { opacity: 1, y: 0 },
@@ -43,7 +45,7 @@ function Shell({ children }) {
 
 function Section({ id, className = "", children }) {
   return (
-      <section id={id} className={`py-20 sm:py-24 ${className}`}>
+      <section id={id} className={`relative py-20 sm:py-24 ${className}`}>
         <Shell>{children}</Shell>
       </section>
   );
@@ -67,7 +69,6 @@ function FeatureCard({ icon, title, desc }) {
       </div>
   );
 }
-
 
 function Pill({ children }) {
   return (
@@ -105,19 +106,13 @@ function DashboardMock() {
               { k: "Late", v: "7", c: "text-amber-200" },
               { k: "Missing", v: "3", c: "text-rose-200" },
             ].map((x) => (
-                <div
-                    key={x.k}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
+                <div key={x.k} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="text-xs text-slate-300">{x.k}</div>
                   <div className={`mt-2 text-2xl font-bold ${x.c}`}>{x.v}</div>
                   <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
                     <div
                         className="h-2 rounded-full bg-gradient-to-r from-indigo-400/70 via-cyan-300/60 to-purple-400/60"
-                        style={{
-                          width:
-                              x.k === "On-time" ? "78%" : x.k === "Late" ? "26%" : "18%",
-                        }}
+                        style={{ width: x.k === "On-time" ? "78%" : x.k === "Late" ? "26%" : "18%" }}
                     />
                   </div>
                 </div>
@@ -129,7 +124,6 @@ function DashboardMock() {
               <div className="text-xs text-slate-300">Verification timeline</div>
               <div className="text-[11px] text-slate-400">last 60 min</div>
             </div>
-
             <div className="mt-3 h-24 rounded-xl bg-[linear-gradient(90deg,rgba(99,102,241,.35),rgba(34,211,238,.22),rgba(168,85,247,.22))] opacity-80" />
             <div className="mt-3 text-xs text-slate-300">
               Push → Verify → Location → Saved (audit trail enabled)
@@ -174,23 +168,16 @@ function PhoneMock() {
                     Verify (Fingerprint)
                   </div>
                 </div>
-
-                <div className="mt-3 text-[11px] text-slate-400">
-                  Sends device + location + signed token to backend.
-                </div>
               </div>
-
               <div className="mt-4 h-10 w-44 mx-auto rounded-2xl bg-white/10" />
             </div>
-          </div>
-
-          <div className="mt-4 text-xs text-slate-300 text-center">
-            Looks like Google-style password re-auth — but for attendance.
           </div>
         </div>
       </div>
   );
 }
+
+// --- Main Page ---
 
 export default function Landing() {
   const [cursor, setCursor] = React.useState({ x: -9999, y: -9999 });
@@ -201,122 +188,107 @@ export default function Landing() {
   }
 
   return (
+      // FIX 1: Removed 'bg-slate-950' from here. It is handled in the fixed background layer now.
       <div
-          className="relative min-h-screen overflow-hidden bg-slate-950 text-white"
+          className="relative min-h-screen overflow-hidden text-white selection:bg-indigo-500/30"
           onMouseMove={onMove}
           onMouseLeave={() => setCursor({ x: -9999, y: -9999 })}
       >
-        <style>{`
-        @keyframes auroraSlide {
-          0% { transform: translate3d(-12%, -10%, 0) scale(1.05); }
-          50% { transform: translate3d(10%, 8%, 0) scale(1.10); }
-          100% { transform: translate3d(-12%, -10%, 0) scale(1.05); }
-        }
-        @keyframes auroraSlide2 {
-          0% { transform: translate3d(10%, 6%, 0) scale(1.05); }
-          50% { transform: translate3d(-8%, -10%, 0) scale(1.12); }
-          100% { transform: translate3d(10%, 6%, 0) scale(1.05); }
-        }
-        @keyframes gridMove {
-          0% { background-position: 0 0, 0 0; opacity: 0.10; }
-          50% { background-position: 160px 90px, 90px 160px; opacity: 0.18; }
-          100% { background-position: 0 0, 0 0; opacity: 0.10; }
-        }
-        @keyframes floatDots {
-          0% { transform: translateY(0px); opacity: 0.14; }
-          50% { transform: translateY(-22px); opacity: 0.32; }
-          100% { transform: translateY(0px); opacity: 0.14; }
-        }
-      `}</style>
+        {/* FIX 2: Background System
+        Using 'fixed' to ensure it stays in place and explicit z-index layering.
+      */}
+        <div className="fixed inset-0 -z-50 pointer-events-none">
 
-        {/* Background (GPU-friendly moving gradients) */}
-        <div className="absolute inset-0 -z-10 pointer-events-none">
+          {/* Layer 1: Solid Background Color */}
           <div className="absolute inset-0 bg-slate-950" />
 
-          <div
-              className="absolute inset-[-20%] opacity-85"
-              style={{
-                background:
-                    "radial-gradient(900px 580px at 18% 22%, rgba(99,102,241,0.40), transparent 62%)," +
-                    "radial-gradient(760px 520px at 86% 30%, rgba(34,211,238,0.30), transparent 62%)," +
-                    "radial-gradient(880px 620px at 56% 92%, rgba(168,85,247,0.30), transparent 60%)",
-                animation: "auroraSlide 10s ease-in-out infinite",
+          {/* Layer 2: Animated Blobs (Using Motion for reliability) */}
+          <motion.div
+              animate={{
+                scale: [1, 1.1, 1],
+                rotate: [0, 5, -5, 0],
+                opacity: [0.4, 0.6, 0.4] // Increased opacity
               }}
-          />
-          <div
-              className="absolute inset-[-25%] opacity-65"
+              transition={{
+                duration: 12,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full mix-blend-screen filter blur-[80px] opacity-40"
               style={{
-                background:
-                    "radial-gradient(820px 520px at 70% 70%, rgba(99,102,241,0.22), transparent 62%)," +
-                    "radial-gradient(740px 520px at 20% 75%, rgba(34,211,238,0.16), transparent 62%)," +
-                    "radial-gradient(820px 560px at 40% 10%, rgba(168,85,247,0.18), transparent 60%)",
-                animation: "auroraSlide2 12s ease-in-out infinite",
+                background: "radial-gradient(circle, rgba(99,102,241,0.5) 0%, rgba(99,102,241,0) 70%)"
               }}
           />
 
-          <div className="absolute inset-0 backdrop-blur-[2px]" />
-
-          <div
-              className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.08)_1px,transparent_1px)] bg-[size:72px_72px]"
-              style={{ animation: "gridMove 8s ease-in-out infinite" }}
+          <motion.div
+              animate={{
+                scale: [1, 1.2, 1],
+                x: [0, 50, 0],
+                opacity: [0.3, 0.5, 0.3]
+              }}
+              transition={{
+                duration: 15,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 1
+              }}
+              className="absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full mix-blend-screen filter blur-[80px] opacity-30"
+              style={{
+                background: "radial-gradient(circle, rgba(34,211,238,0.4) 0%, rgba(34,211,238,0) 70%)"
+              }}
           />
 
-          <div className="absolute inset-0">
-            {Array.from({ length: 44 }).map((_, i) => (
-                <div
-                    key={i}
-                    className="absolute rounded-full bg-white/40"
-                    style={{
-                      width: `${(i % 5) + 2}px`,
-                      height: `${(i % 5) + 2}px`,
-                      left: `${(i * 37) % 100}%`,
-                      top: `${(i * 53) % 100}%`,
-                      animation: `floatDots ${4 + (i % 7)}s ease-in-out infinite`,
-                      animationDelay: `${(i % 9) * 0.15}s`,
-                      opacity: 0.22,
-                    }}
-                />
-            ))}
-          </div>
+          <motion.div
+              animate={{
+                scale: [1, 1.3, 1],
+                y: [0, -30, 0],
+                opacity: [0.3, 0.5, 0.3]
+              }}
+              transition={{
+                duration: 18,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 2
+              }}
+              className="absolute -bottom-[20%] left-[20%] w-[60vw] h-[60vw] rounded-full mix-blend-screen filter blur-[80px] opacity-30"
+              style={{
+                background: "radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(168,85,247,0) 70%)"
+              }}
+          />
 
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,transparent_14%,rgba(2,6,23,0.62)_72%)]" />
+          {/* Layer 3: Grid Overlay */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
         </div>
 
-        {/* Cursor-follow glow (Antigravity feel) */}
-        <div
-            className="pointer-events-none absolute -z-10 h-[520px] w-[520px] rounded-full"
+        {/* Mouse Follower (Spotlight) */}
+        <motion.div
+            className="pointer-events-none fixed -z-40 h-[600px] w-[600px] rounded-full"
+            animate={{
+              x: cursor.x - 300,
+              y: cursor.y - 300
+            }}
+            transition={{ type: "spring", damping: 30, stiffness: 200, mass: 0.5 }}
             style={{
-              left: cursor.x - 260,
-              top: cursor.y - 260,
-              background:
-                  "radial-gradient(circle at center, rgba(99,102,241,0.22), rgba(34,211,238,0.14), transparent 65%)",
-              filter: "blur(10px)",
-              transform: "translate3d(0,0,0)",
+              background: "radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 60%)",
             }}
         />
 
-        {/* NAV */}
+        {/* --- CONTENT START --- */}
+
         <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/55 backdrop-blur-xl">
           <Shell>
             <div className="flex items-center justify-between py-4">
               <Link to="/" className="flex items-center gap-3">
                 <LogoMark />
                 <div className="leading-tight">
-                  {/*<div className="text-sm font-semibold">InShift</div>*/}
-                  {/*<div className="text-xs text-slate-300">Smart Attendance</div>*/}
+                  {/* <div className="text-sm font-semibold text-white">InShift</div> */}
                 </div>
               </Link>
 
               <nav className="hidden md:flex items-center gap-6 text-sm text-slate-200">
-                <a className="hover:text-white" href="#features">
-                  Features
-                </a>
-                <a className="hover:text-white" href="#workflow">
-                  Workflow
-                </a>
-                <a className="hover:text-white" href="#faq">
-                  FAQ
-                </a>
+                <a className="hover:text-white transition-colors" href="#features">Features</a>
+                <a className="hover:text-white transition-colors" href="#workflow">Workflow</a>
+                <a className="hover:text-white transition-colors" href="#faq">FAQ</a>
               </nav>
 
               <div className="flex items-center gap-2">
@@ -333,7 +305,6 @@ export default function Landing() {
           </Shell>
         </header>
 
-        {/* HERO */}
         <Section className="pt-16 sm:pt-20">
           <div className="text-center">
             <Reveal>
@@ -373,9 +344,7 @@ export default function Landing() {
                   </Button>
                 </Link>
                 <a href="#workflow">
-                  <Button
-                      className="bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15 px-8 py-6 text-lg rounded-2xl"
-                  >
+                  <Button className="bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15 px-8 py-6 text-lg rounded-2xl">
                     See how it works <ChevronRight className="h-4 w-4" />
                   </Button>
                 </a>
@@ -392,7 +361,6 @@ export default function Landing() {
               </div>
             </Reveal>
 
-            {/* Cool “pics” / product visuals */}
             <div className="mt-14 grid grid-cols-1 lg:grid-cols-2 gap-6 text-left">
               <motion.div
                   initial={{ opacity: 0, y: 22 }}
@@ -402,7 +370,6 @@ export default function Landing() {
               >
                 <DashboardMock />
               </motion.div>
-
               <motion.div
                   initial={{ opacity: 0, y: 22 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -413,15 +380,12 @@ export default function Landing() {
               </motion.div>
             </div>
 
-            {/* Live workflow strip */}
             <motion.div
                 className="mt-14 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-[0_30px_120px_rgba(0,0,0,0.35)] overflow-hidden"
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.25 }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
-                animate={{ y: [0, -6, 0] }}
-                style={{ willChange: "transform" }}
             >
               <div className="p-6 sm:p-8">
                 <div className="flex items-center justify-between gap-3">
@@ -430,7 +394,6 @@ export default function Landing() {
                   Notification → Verify → Location → Saved
                 </span>
                 </div>
-
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                     <div className="flex items-center gap-2 text-sm font-semibold">
@@ -441,7 +404,6 @@ export default function Landing() {
                       Admin defines time windows and sends FCM notifications.
                     </div>
                   </div>
-
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       <Fingerprint className="h-4 w-4 text-indigo-200" />
@@ -451,7 +413,6 @@ export default function Landing() {
                       Passkeys/WebAuthn triggers OS prompt. No biometric storage.
                     </div>
                   </div>
-
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
                     <div className="flex items-center gap-2 text-sm font-semibold">
                       <MapPin className="h-4 w-4 text-indigo-200" />
@@ -463,13 +424,11 @@ export default function Landing() {
                   </div>
                 </div>
               </div>
-
               <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-purple-500" />
             </motion.div>
           </div>
         </Section>
 
-        {/* FEATURES */}
         <Section id="features">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
             <Reveal>
@@ -534,7 +493,6 @@ export default function Landing() {
           </div>
         </Section>
 
-        {/* WORKFLOW */}
         <Section id="workflow" className="border-t border-white/10">
           <Reveal>
             <div className="text-center">
@@ -563,7 +521,6 @@ export default function Landing() {
                 </div>
               </div>
             </Reveal>
-
             <Reveal delay={0.12}>
               <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8">
                 <div className="text-xs text-slate-300">Step 02</div>
@@ -575,7 +532,6 @@ export default function Landing() {
                 </div>
               </div>
             </Reveal>
-
             <Reveal delay={0.18}>
               <div className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8">
                 <div className="text-xs text-slate-300">Step 03</div>
@@ -590,7 +546,6 @@ export default function Landing() {
           </div>
         </Section>
 
-        {/* FAQ */}
         <Section id="faq" className="border-t border-white/10">
           <Reveal>
             <div className="text-center">
@@ -600,7 +555,6 @@ export default function Landing() {
               </h2>
             </div>
           </Reveal>
-
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Reveal delay={0.06}>
               <FAQItem
@@ -629,7 +583,6 @@ export default function Landing() {
           </div>
         </Section>
 
-        {/* FINAL CTA */}
         <Section className="border-t border-white/10">
           <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-indigo-600/20 via-cyan-500/10 to-purple-600/20 backdrop-blur-xl p-10 sm:p-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
@@ -669,7 +622,6 @@ export default function Landing() {
           </div>
         </Section>
 
-        {/* FOOTER */}
         <footer className="border-t border-white/10 py-10">
           <Shell>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 text-sm text-slate-300">
@@ -682,7 +634,6 @@ export default function Landing() {
                   </div>
                 </div>
               </div>
-
               <div className="flex gap-4">
                 <Link className="hover:text-white" to="/privacy">
                   Privacy
@@ -691,7 +642,6 @@ export default function Landing() {
                   Terms
                 </Link>
               </div>
-
               <div className="text-xs text-slate-400">
                 © {new Date().getFullYear()} InShift
               </div>
