@@ -7,6 +7,7 @@ import Login from "./pages/auth_pages/Login.jsx";
 import Register from "./pages/auth_pages/Register.jsx";
 import Notifications from "./features/notification/Notifications.jsx";
 import Attendance from "./features/Attendance/Attendance.jsx";
+import Verify from "./features/verification/Verify.jsx";
 
 function App() {
     return (
@@ -19,6 +20,7 @@ function App() {
                 <Route index element={<Overview />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="Attendance" element={<Attendance />} />
+                <Route path="Verify" element={<Verify />} />
             </Route>
 
             <Route path="/login" element={<Login/>}></Route>
