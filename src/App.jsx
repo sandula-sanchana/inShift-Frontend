@@ -1,34 +1,57 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { authStore } from "./features/auth/store";
+
 import Landing from "./pages/Landing.jsx";
-import AppLayout from "./layouts/AppLayout.jsx";
-import Overview from "./pages/Overview.jsx";
-import EmployeeDashboard from "./features/dashboard/EmployeeDashboard.jsx";
 import Login from "./pages/auth_pages/Login.jsx";
 import Register from "./pages/auth_pages/Register.jsx";
-import Notifications from "./features/notification/Notifications.jsx";
-import Attendance from "./features/Attendance/Attendance.jsx";
-import Verify from "./features/verification/Verify.jsx";
 
-function App() {
+import EmployeeDashboard from "./pages/emp/EmployeeDashboard.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+
+function ProtectedRoute({ children }) {
+    const user = authStore((s) => s.user);
+    return user ? children : <Navigate to="/login" replace />;
+}
+
+function RoleRoute({ allow, children }) {
+    const role = authStore((s) => s.user?.role);
+    return role === allow ? children : <Navigate to="/login" replace />;
+}
+
+export default function App() {
     return (
         <Routes>
             {/* Public */}
             <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-            {/* Dashboard Layout */}
-            <Route path="/app" element={<AppLayout />}>
-                <Route index element={<Overview />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="Attendance" element={<Attendance />} />
-                <Route path="Verify" element={<Verify />} />
-            </Route>
+            {/* Employee App */}
+            <Route
+                path="/emp/*"
+                element={
+                    <ProtectedRoute>
+                        <RoleRoute allow="EMPLOYEE">
+                            <EmployeeDashboard />
+                        </RoleRoute>
+                    </ProtectedRoute>
+                }
+            />
 
-            <Route path="/login" element={<Login/>}></Route>
-            <Route path="/register" element={<Register/>}></Route>
+            {/* Admin App */}
+            <Route
+                path="/admin/*"
+                element={
+                    <ProtectedRoute>
+                        <RoleRoute allow="ADMIN">
+                            <AdminDashboard />
+                        </RoleRoute>
+                    </ProtectedRoute>
+                }
+            />
 
+            {/* Catch All */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }
-
-export default App;

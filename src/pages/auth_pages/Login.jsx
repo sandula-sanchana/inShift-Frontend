@@ -29,7 +29,7 @@ export default function Login() {
       const token = "demo-token";
       setSession(token, user);
       toast({ title: "Welcome", message: `Signed in as ${role}.` });
-      nav("/app");
+      nav(role === "ADMIN" ? "/admin" : "/emp");
     } catch (e2) {
       setErr(e2?.response?.data?.message || e2.message || "Login failed");
     } finally {

@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { SectionTitle } from "../../components/common/SectionTitle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
-import { Badge } from "../../components/ui/Badge";
+import { SectionTitle } from "../../../components/common/SectionTitle.jsx";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card.jsx";
+import { Button } from "../../../components/ui/Button.jsx";
+import { Badge } from "../../../components/ui/Badge.jsx";
 import { Fingerprint, MapPin, Smartphone, ShieldCheck, Loader2 } from "lucide-react";
-import { useToast } from "../../components/ui/Toast";
+import { useToast } from "../../../components/ui/Toast.jsx";
 
 function getReqId() {
   const u = new URL(window.location.href);

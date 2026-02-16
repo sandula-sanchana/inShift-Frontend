@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { SectionTitle } from "../../components/common/SectionTitle.jsx";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card.jsx";
-import { Button } from "../../components/ui/Button.jsx";
-import { Badge } from "../../components/ui/Badge.jsx";
+import { SectionTitle } from "../../../components/common/SectionTitle.jsx";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card.jsx";
+import { Button } from "../../../components/ui/Button.jsx";
+import { Badge } from "../../../components/ui/Badge.jsx";
 import { Bell, Save, Send } from "lucide-react";
-import { useToast } from "../../components/ui/Toast.jsx";
+import { useToast } from "../../../components/ui/Toast.jsx";
 
 export default function Notifications() {
   const toast = useToast((s) => s.push);

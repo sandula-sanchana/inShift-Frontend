@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { SectionTitle } from "../../components/common/SectionTitle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card";
-import { Badge } from "../../components/ui/Badge";
-import { Button } from "../../components/ui/Button";
-import { EmptyState } from "../../components/common/EmptyState";
+import { SectionTitle } from "../../../components/common/SectionTitle.jsx";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card.jsx";
+import { Badge } from "../../../components/ui/Badge.jsx";
+import { Button } from "../../../components/ui/Button.jsx";
+import { EmptyState } from "../../../components/common/EmptyState.jsx";
 import { Fingerprint, Building2, Globe, MapPin, History, Filter } from "lucide-react";
-import { useToast } from "../../components/ui/Toast";
+import { useToast } from "../../../components/ui/Toast.jsx";
 
 const tabs = [
   { key: "timeline", label: "Timeline" },

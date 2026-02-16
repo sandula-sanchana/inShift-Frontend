@@ -66,7 +66,8 @@ export default function Register() {
             const user = { ...demoUser(role), name, email };
             setSession("demo-token", user);
             toast({ title: "Account created", message: "Welcome to InShift!" });
-            nav("/app");
+            nav(role === "ADMIN" ? "/admin" : "/emp");
+
         } finally {
             setLoading(false);
         }
