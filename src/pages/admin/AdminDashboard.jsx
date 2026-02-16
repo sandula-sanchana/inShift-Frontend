@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, MapPin, Settings, LogOut } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { authStore } from "../../features/auth/store";
 import { LogoMark } from "../../components/common/Logo";
-
+import BranchesPage from  "../../features/admin/branch/BranchesPage.jsx"
 function NavItem({ to, icon: Icon, label }) {
     return (
         <NavLink
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
                         <Routes>
                             <Route index element={<AdminOverview />} />
                             <Route path="employees" element={<div className="text-slate-900 font-semibold">Employees Page</div>} />
-                            <Route path="branches" element={<div className="text-slate-900 font-semibold">Branches Page</div>} />
+                            <Route path="branches" element={<BranchesPage />} />
                             <Route path="georules" element={<div className="text-slate-900 font-semibold">Geo Rules Page</div>} />
                             <Route path="settings" element={<div className="text-slate-900 font-semibold">Admin Settings Page</div>} />
                             <Route path="*" element={<Navigate to="/admin" replace />} />
