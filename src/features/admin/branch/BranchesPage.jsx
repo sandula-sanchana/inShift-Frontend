@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 
-const API_BASE = import.meta.env.BASE_URL || "";
+// ❌ DO NOT use import.meta.env.BASE_URL for API calls (it breaks into http://api/...)
+// const API_BASE = import.meta.env.BASE_URL || "";
 
 // Fix leaflet default marker in Vite
 const markerIcon = new L.Icon({
@@ -53,6 +54,20 @@ function validateBranch(form) {
     return errors;
 }
 
+// ✅ Parse backend wrapper: APIResponse<String> where data is JSON string
+function unwrapJson(wrapper) {
+    // wrapper = { status, message, data: "....json string...." }
+    try {
+        if (!wrapper) return null;
+        if (typeof wrapper === "string") return JSON.parse(wrapper); // just in case
+        if (typeof wrapper.data === "string") return JSON.parse(wrapper.data);
+        // if backend ever returns direct JSON later, this still works
+        return wrapper.data ?? wrapper;
+    } catch {
+        return null;
+    }
+}
+
 export default function BranchesPage() {
     const [form, setForm] = useState({
         branchId: null,
@@ -84,7 +99,7 @@ export default function BranchesPage() {
         [form.latitude, form.longitude]
     );
 
-    // ✅ Search via BACKEND proxy
+    // ✅ Search via Vite proxy (/api -> http://localhost:8080)
     useEffect(() => {
         const q = debouncedQuery.trim();
         if (q.length < 4) {
@@ -99,12 +114,15 @@ export default function BranchesPage() {
         (async () => {
             try {
                 setStatus("Searching address...");
-                const res = await fetch(
-                    `${API_BASE}/api/v1/geocode/search?q=${encodeURIComponent(q)}`,
-                    { signal: controller.signal }
-                );
+
+                const res = await fetch(`/api/v1/geocode/search?q=${encodeURIComponent(q)}`, {
+                    signal: controller.signal,
+                });
                 if (!res.ok) throw new Error(`Search failed (${res.status})`);
-                const data = await res.json();
+
+                const wrapper = await res.json();
+                const data = unwrapJson(wrapper);
+
                 setSuggestions(Array.isArray(data) ? data : []);
                 setStatus(Array.isArray(data) && data.length ? "" : "No matches. Try more details.");
             } catch (e) {
@@ -137,7 +155,7 @@ export default function BranchesPage() {
 
     const reverseAbortRef = useRef(null);
 
-    // ✅ Reverse via BACKEND proxy
+    // ✅ Reverse via Vite proxy
     async function onPick(lat, lng) {
         setStatus("📍 Location set. Finding address...");
 
@@ -146,12 +164,13 @@ export default function BranchesPage() {
         reverseAbortRef.current = controller;
 
         try {
-            const res = await fetch(
-                `${API_BASE}/api/v1/geocode/reverse?lat=${lat}&lng=${lng}`,
-                { signal: controller.signal }
-            );
+            const res = await fetch(`/api/v1/geocode/reverse?lat=${lat}&lng=${lng}`, {
+                signal: controller.signal,
+            });
             if (!res.ok) throw new Error(`Reverse failed (${res.status})`);
-            const data = await res.json();
+
+            const wrapper = await res.json();
+            const data = unwrapJson(wrapper) || {};
             const addr = data.address || {};
 
             setForm((prev) => ({
@@ -225,7 +244,7 @@ export default function BranchesPage() {
             setSaving(true);
             setStatus("Saving...");
 
-            const res = await fetch(`${API_BASE}/api/v1/branches`, {
+            const res = await fetch(`/api/v1/branches`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -258,16 +277,38 @@ export default function BranchesPage() {
                 <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
                     <div className="grid gap-3">
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Branch Code" placeholder="e.g., COL-01" value={form.branchCode} onChange={(v) => setField("branchCode", v)} error={errors.branchCode} />
-                            <Field label="Branch Name" placeholder="e.g., Colombo HQ" value={form.branchName} onChange={(v) => setField("branchName", v)} error={errors.branchName} />
+                            <Field
+                                label="Branch Code"
+                                placeholder="e.g., COL-01"
+                                value={form.branchCode}
+                                onChange={(v) => setField("branchCode", v)}
+                                error={errors.branchCode}
+                            />
+                            <Field
+                                label="Branch Name"
+                                placeholder="e.g., Colombo HQ"
+                                value={form.branchName}
+                                onChange={(v) => setField("branchName", v)}
+                                error={errors.branchName}
+                            />
                         </div>
 
                         <div className="relative">
-                            <Field label="Search Address" placeholder="Type address (IJSE Panadura...)" value={addressQuery} onChange={(v) => setAddressQuery(v)} />
+                            <Field
+                                label="Search Address"
+                                placeholder="Type address (IJSE Panadura...)"
+                                value={addressQuery}
+                                onChange={(v) => setAddressQuery(v)}
+                            />
                             {suggestions.length > 0 && (
                                 <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
                                     {suggestions.map((s) => (
-                                        <button key={`${s.place_id}-${s.osm_id}`} type="button" onClick={() => selectSuggestion(s)} className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                                        <button
+                                            key={`${s.place_id}-${s.osm_id}`}
+                                            type="button"
+                                            onClick={() => selectSuggestion(s)}
+                                            className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                                        >
                                             {s.display_name}
                                         </button>
                                     ))}
@@ -276,14 +317,35 @@ export default function BranchesPage() {
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Address Line 1" placeholder="Road / building" value={form.addressLine1} onChange={(v) => setField("addressLine1", v)} error={errors.addressLine1} />
-                            <Field label="Address Line 2" placeholder="Optional" value={form.addressLine2} onChange={(v) => setField("addressLine2", v)} />
+                            <Field
+                                label="Address Line 1"
+                                placeholder="Road / building"
+                                value={form.addressLine1}
+                                onChange={(v) => setField("addressLine1", v)}
+                                error={errors.addressLine1}
+                            />
+                            <Field
+                                label="Address Line 2"
+                                placeholder="Optional"
+                                value={form.addressLine2}
+                                onChange={(v) => setField("addressLine2", v)}
+                            />
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-3">
                             <Field label="City" value={form.city} onChange={(v) => setField("city", v)} error={errors.city} />
-                            <Field label="District" value={form.district} onChange={(v) => setField("district", v)} error={errors.district} />
-                            <Field label="Province" value={form.province} onChange={(v) => setField("province", v)} error={errors.province} />
+                            <Field
+                                label="District"
+                                value={form.district}
+                                onChange={(v) => setField("district", v)}
+                                error={errors.district}
+                            />
+                            <Field
+                                label="Province"
+                                value={form.province}
+                                onChange={(v) => setField("province", v)}
+                                error={errors.province}
+                            />
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -292,16 +354,30 @@ export default function BranchesPage() {
                         </div>
 
                         <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                            <input type="checkbox" checked={!!form.active} onChange={(e) => setField("active", e.target.checked)} className="h-4 w-4" />
+                            <input
+                                type="checkbox"
+                                checked={!!form.active}
+                                onChange={(e) => setField("active", e.target.checked)}
+                                className="h-4 w-4"
+                            />
                             Active
                         </label>
 
                         <div className="flex flex-wrap items-center gap-2 pt-2">
-                            <button type="button" onClick={useMyLocation} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                            <button
+                                type="button"
+                                onClick={useMyLocation}
+                                className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            >
                                 📍 Use My Location
                             </button>
 
-                            <button type="button" disabled={saving} onClick={saveBranch} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60">
+                            <button
+                                type="button"
+                                disabled={saving}
+                                onClick={saveBranch}
+                                className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                            >
                                 {saving ? "Saving..." : "Save Branch"}
                             </button>
 
@@ -323,10 +399,15 @@ export default function BranchesPage() {
 
                     <div className="overflow-hidden rounded-2xl">
                         <MapContainer center={mapCenter} zoom={13} style={{ height: 420, width: "100%" }}>
-                            <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <TileLayer
+                                attribution="© OpenStreetMap contributors"
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
                             <PanTo lat={form.latitude} lng={form.longitude} />
                             <ClickToPick onPick={onPick} />
-                            {form.latitude != null && form.longitude != null && <Marker position={[form.latitude, form.longitude]} icon={markerIcon} />}
+                            {form.latitude != null && form.longitude != null && (
+                                <Marker position={[form.latitude, form.longitude]} icon={markerIcon} />
+                            )}
                         </MapContainer>
                     </div>
 
