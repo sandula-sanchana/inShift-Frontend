@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
-
-// ❌ DO NOT use import.meta.env.BASE_URL for API calls (it breaks into http://api/...)
-// const API_BASE = import.meta.env.BASE_URL || "";
+import axios from "axios";
 
 // Fix leaflet default marker in Vite
 const markerIcon = new L.Icon({
@@ -21,6 +19,25 @@ function PanTo({ lat, lng }) {
     }, [lat, lng, map]);
     return null;
 }
+
+//fix city fix issue
+function pickCity(addr, fallback = "") {
+    const raw =
+        addr.city ||
+        addr.town ||
+        addr.village ||
+        addr.municipality ||
+        addr.city_district ||
+        addr.suburb ||
+        addr.hamlet ||
+        addr.county ||
+        fallback;
+
+    if (typeof raw !== "string") return fallback;
+
+    return raw.replace(/\s*DS Division\s*/i, "").trim();
+}
+
 
 function ClickToPick({ onPick }) {
     useMapEvents({
@@ -56,16 +73,25 @@ function validateBranch(form) {
 
 // ✅ Parse backend wrapper: APIResponse<String> where data is JSON string
 function unwrapJson(wrapper) {
-    // wrapper = { status, message, data: "....json string...." }
     try {
         if (!wrapper) return null;
-        if (typeof wrapper === "string") return JSON.parse(wrapper); // just in case
+        if (typeof wrapper === "string") return JSON.parse(wrapper);
         if (typeof wrapper.data === "string") return JSON.parse(wrapper.data);
-        // if backend ever returns direct JSON later, this still works
         return wrapper.data ?? wrapper;
     } catch {
         return null;
     }
+}
+
+// ✅ Axios error helper (keeps your same status logic)
+function getAxiosErrorMessage(err, fallback = "Request failed") {
+    // Abort
+    if (err?.code === "ERR_CANCELED") return "AbortError";
+
+    const status = err?.response?.status;
+    if (status) return `${fallback} (${status})`;
+
+    return err?.message || fallback;
 }
 
 export default function BranchesPage() {
@@ -115,19 +141,20 @@ export default function BranchesPage() {
             try {
                 setStatus("Searching address...");
 
-                const res = await fetch(`/api/v1/geocode/search?q=${encodeURIComponent(q)}`, {
-                    signal: controller.signal,
+                const res = await axios.get("/api/v1/geocode/search", {
+                    params: { q },
+                    signal: controller.signal, // ✅ AbortController works
                 });
-                if (!res.ok) throw new Error(`Search failed (${res.status})`);
 
-                const wrapper = await res.json();
+                const wrapper = res.data;
                 const data = unwrapJson(wrapper);
 
                 setSuggestions(Array.isArray(data) ? data : []);
                 setStatus(Array.isArray(data) && data.length ? "" : "No matches. Try more details.");
             } catch (e) {
-                if (e.name === "AbortError") return;
-                setStatus(e.message || "Search failed");
+                const msg = getAxiosErrorMessage(e, "Search failed");
+                if (msg === "AbortError") return; // keep same logic as fetch AbortError
+                setStatus(msg);
             }
         })();
     }, [debouncedQuery]);
@@ -140,8 +167,11 @@ export default function BranchesPage() {
         setForm((prev) => ({
             ...prev,
             addressLine1: addr.road || addr.neighbourhood || prev.addressLine1,
-            city: addr.city || addr.town || addr.village || prev.city,
-            district: addr.county || prev.district,
+            city: pickCity(addr, prev.city),
+            district:
+                addr.state_district ||
+                addr.county ||
+                prev.district,
             province: addr.state || prev.province,
             latitude: lat,
             longitude: lng,
@@ -164,12 +194,12 @@ export default function BranchesPage() {
         reverseAbortRef.current = controller;
 
         try {
-            const res = await fetch(`/api/v1/geocode/reverse?lat=${lat}&lng=${lng}`, {
+            const res = await axios.get("/api/v1/geocode/reverse", {
+                params: { lat, lng },
                 signal: controller.signal,
             });
-            if (!res.ok) throw new Error(`Reverse failed (${res.status})`);
 
-            const wrapper = await res.json();
+            const wrapper = res.data;
             const data = unwrapJson(wrapper) || {};
             const addr = data.address || {};
 
@@ -182,14 +212,20 @@ export default function BranchesPage() {
                     addr.neighbourhood ||
                     addr.suburb ||
                     prev.addressLine1,
-                city: addr.city || addr.town || addr.village || prev.city,
-                district: addr.county || prev.district,
+                city: pickCity(addr, prev.city),
+                district:
+                    addr.state_district ||
+                    addr.county ||
+                    prev.district,
+
                 province: addr.state || prev.province,
             }));
 
             setStatus("✅ Address filled from selected point.");
         } catch (e) {
-            if (e.name === "AbortError") return;
+            const msg = getAxiosErrorMessage(e, "Reverse failed");
+            if (msg === "AbortError") return;
+
             setForm((prev) => ({ ...prev, latitude: lat, longitude: lng }));
             setStatus("⚠️ Couldn't fetch address. You can type it manually.");
         }
@@ -244,17 +280,13 @@ export default function BranchesPage() {
             setSaving(true);
             setStatus("Saving...");
 
-            const res = await fetch(`/api/v1/branches`, {
-                method: "POST",
+            await axios.post("/api/v1/branches", payload, {
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
             });
-
-            if (!res.ok) throw new Error(`Save failed (${res.status})`);
 
             setStatus("✅ Branch saved!");
         } catch (e) {
-            setStatus(e.message || "Save failed");
+            setStatus(getAxiosErrorMessage(e, "Save failed"));
         } finally {
             setSaving(false);
         }
@@ -399,10 +431,7 @@ export default function BranchesPage() {
 
                     <div className="overflow-hidden rounded-2xl">
                         <MapContainer center={mapCenter} zoom={13} style={{ height: 420, width: "100%" }}>
-                            <TileLayer
-                                attribution="© OpenStreetMap contributors"
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
+                            <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                             <PanTo lat={form.latitude} lng={form.longitude} />
                             <ClickToPick onPick={onPick} />
                             {form.latitude != null && form.longitude != null && (
