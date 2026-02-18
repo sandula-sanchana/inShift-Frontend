@@ -280,11 +280,11 @@ export default function BranchesPage() {
             setSaving(true);
             setStatus("Saving...");
 
-            await axios.post("/api/v1/branches", payload, {
+            const res=await axios.post("/api/v1/branch", payload, {
                 headers: { "Content-Type": "application/json" },
             });
 
-            setStatus("✅ Branch saved!");
+            setStatus(res.data.message);
         } catch (e) {
             setStatus(getAxiosErrorMessage(e, "Save failed"));
         } finally {
