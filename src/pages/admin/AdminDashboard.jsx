@@ -11,29 +11,26 @@ function NavItem({ to, icon: Icon, label }) {
     return (
         <NavLink
             to={to}
+            end={to === "/admin"} // Ensures the "Overview" doesn't stay active on sub-routes
             className={({ isActive }) =>
                 cn(
-                    "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",
-                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300",
+                    "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1",
                     !isActive &&
-                    "text-slate-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:via-purple-50 hover:to-cyan-50 hover:text-slate-900",
+                    "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900",
                     isActive &&
-                    "text-white bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 shadow-md"
+                    "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
                 )
             }
         >
             {({ isActive }) => (
                 <>
-          <span
-              className={cn(
-                  "grid h-9 w-9 place-items-center rounded-2xl transition ring-1",
-                  isActive
-                      ? "bg-white/15 text-white ring-white/20"
-                      : "bg-white text-indigo-700 ring-slate-200 group-hover:ring-indigo-200"
-              )}
-          >
-            <Icon className="h-4.5 w-4.5" />
-          </span>
+                    <Icon
+                        className={cn(
+                            "h-5 w-5 transition-colors",
+                            isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600"
+                        )}
+                    />
                     <span className="truncate">{label}</span>
                 </>
             )}
@@ -43,27 +40,50 @@ function NavItem({ to, icon: Icon, label }) {
 
 function AdminOverview() {
     return (
-        <>
-            <div className="text-2xl font-bold text-slate-900">Admin Dashboard</div>
-            <div className="mt-2 text-sm text-slate-600">
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="text-2xl font-bold tracking-tight text-slate-900">Admin Dashboard</div>
+            <div className="mt-1.5 text-sm text-slate-500">
                 Manage branches, employees, geo rules, and system settings.
             </div>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <div className="rounded-3xl border border-indigo-100 bg-gradient-to-b from-white to-indigo-50/40 p-5 hover:shadow-sm transition">
-                    <div className="text-sm font-semibold text-slate-900">Branches</div>
-                    <div className="mt-1 text-xs text-slate-600">Create & manage locations</div>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-indigo-200">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-lg bg-indigo-50 p-2 text-indigo-600">
+                            <MapPin className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-slate-900">Branches</div>
+                            <div className="mt-0.5 text-xs text-slate-500">Create & manage locations</div>
+                        </div>
+                    </div>
                 </div>
-                <div className="rounded-3xl border border-purple-100 bg-gradient-to-b from-white to-purple-50/40 p-5 hover:shadow-sm transition">
-                    <div className="text-sm font-semibold text-slate-900">Employees</div>
-                    <div className="mt-1 text-xs text-slate-600">Add users, assign branches</div>
+
+                <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-purple-200">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-lg bg-purple-50 p-2 text-purple-600">
+                            <Users className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-slate-900">Employees</div>
+                            <div className="mt-0.5 text-xs text-slate-500">Add users, assign branches</div>
+                        </div>
+                    </div>
                 </div>
-                <div className="rounded-3xl border border-cyan-100 bg-gradient-to-b from-white to-cyan-50/40 p-5 hover:shadow-sm transition">
-                    <div className="text-sm font-semibold text-slate-900">Geo Rules</div>
-                    <div className="mt-1 text-xs text-slate-600">Set allowed check-in zones</div>
+
+                <div className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-cyan-200">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-lg bg-cyan-50 p-2 text-cyan-600">
+                            <MapPin className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <div className="text-sm font-semibold text-slate-900">Geo Rules</div>
+                            <div className="mt-0.5 text-xs text-slate-500">Set allowed check-in zones</div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 
@@ -83,33 +103,32 @@ export default function AdminDashboard() {
     );
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-sky-50 to-cyan-100">
-            {/* ✅ Make the whole layout wider */}
-            <div className="mx-auto w-full max-w-[1700px] px-3 sm:px-5 lg:px-8 py-6 lg:py-8">
+        <div className="min-h-screen bg-slate-50/50 selection:bg-indigo-100 selection:text-indigo-900 font-sans">
+            <div className="mx-auto w-full max-w-[1700px] px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+
                 {/* Top bar */}
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-cyan-600 shadow-sm ring-1 ring-white/40">
-                            {/* if LogoMark is dark, wrap it with a class that makes it white inside your SVG */}
+                <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white px-6 py-4 shadow-sm border border-slate-200">
+                    <div className="flex items-center gap-4">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 shadow-sm shadow-indigo-200 text-white">
                             <LogoMark />
                         </div>
                         <div className="leading-tight">
-                            <div className="text-base font-semibold text-slate-900">InShift</div>
-                            <div className="text-xs text-slate-600">Admin Portal</div>
+                            <div className="text-base font-bold tracking-tight text-slate-900">InShift</div>
+                            <div className="text-xs font-medium text-slate-500 uppercase tracking-wider mt-0.5">Admin Portal</div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-4">
                         <div className="hidden sm:block text-right">
                             <div className="text-sm font-semibold text-slate-900">{user?.name || "Admin User"}</div>
-                            <div className="text-xs text-slate-600">ADMIN</div>
+                            <div className="text-xs text-slate-500">Administrator</div>
                         </div>
-
+                        <div className="hidden sm:block h-8 w-px bg-slate-200" /> {/* Divider */}
                         <button
                             className={cn(
-                                "inline-flex items-center gap-2 rounded-2xl px-3.5 py-2.5 text-sm font-semibold transition",
-                                "bg-white/80 text-slate-700 shadow-sm ring-1 ring-slate-200 backdrop-blur",
-                                "hover:bg-white hover:text-slate-900 active:scale-[0.99]"
+                                "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200",
+                                "bg-white text-slate-600 border border-slate-200 shadow-sm",
+                                "hover:bg-slate-50 hover:text-red-600 hover:border-red-200 focus:ring-2 focus:ring-red-100 active:scale-[0.98]"
                             )}
                             onClick={() => {
                                 clear();
@@ -122,48 +141,36 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* ✅ Wider main area:
-            - Sidebar a bit smaller on xl to give more space to content
-            - Main area looks bigger and more “open”
-        */}
-                <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[280px_1fr] 2xl:grid-cols-[300px_1fr] xl:gap-8">
+                <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[260px_1fr] 2xl:grid-cols-[280px_1fr] xl:gap-8">
                     {/* Sidebar */}
-                    <aside className="h-fit rounded-3xl bg-gradient-to-b from-white/90 to-indigo-50/70 backdrop-blur shadow-sm ring-1 ring-indigo-100 overflow-hidden">
-                        <div className="px-5 py-5 border-b border-slate-100">
-                            <div className="text-sm font-semibold text-slate-900">Navigation</div>
-                            <div className="text-xs text-slate-600">Admin modules</div>
+                    <aside className="h-fit rounded-2xl bg-white shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                        <div className="px-6 py-5 border-b border-slate-100">
+                            <div className="text-sm font-bold text-slate-900">Navigation</div>
+                            <div className="text-xs text-slate-500 mt-0.5">Manage your system</div>
                         </div>
 
-                        <div className="px-3 py-3 space-y-1">
+                        <div className="px-3 py-4 space-y-1">
                             {nav.map((n) => (
                                 <NavItem key={n.to} {...n} />
                             ))}
                         </div>
-
-                        {/* small color footer */}
-                        <div className="px-5 py-4 border-t border-slate-100">
-                            <div className="h-2 w-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-500 opacity-80" />
-                            <div className="mt-2 text-[11px] text-slate-500">InShift • Admin</div>
-                        </div>
                     </aside>
 
-                    {/* Main */}
+                    {/* Main Content Area */}
                     <main className="min-w-0">
-                        {/* ✅ Main container bigger + softer border + more color */}
-                        <div className="rounded-3xl bg-gradient-to-b from-white/95 to-cyan-50/60 backdrop-blur shadow-sm ring-1 ring-cyan-100">
-                            {/* ✅ reduce padding a bit so pages feel bigger */}
-                            <div className="p-4 sm:p-6 lg:p-7">
+                        <div className="min-h-[600px] h-full rounded-2xl bg-white shadow-sm border border-slate-200">
+                            <div className="p-6 sm:p-8 lg:p-10">
                                 <Routes>
                                     <Route index element={<AdminOverview />} />
                                     <Route path="employees" element={<EmployeesPage />} />
                                     <Route path="branches" element={<BranchesPage />} />
                                     <Route
                                         path="georules"
-                                        element={<div className="text-slate-900 font-semibold">Geo Rules Page</div>}
+                                        element={<div className="text-slate-900 font-semibold animate-in fade-in duration-500">Geo Rules Configuration</div>}
                                     />
                                     <Route
                                         path="settings"
-                                        element={<div className="text-slate-900 font-semibold">Admin Settings Page</div>}
+                                        element={<div className="text-slate-900 font-semibold animate-in fade-in duration-500">System Settings</div>}
                                     />
                                     <Route path="*" element={<Navigate to="/admin" replace />} />
                                 </Routes>
