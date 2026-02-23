@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
+import {
+    MapContainer,
+    TileLayer,
+    Marker,
+    useMap,
+    useMapEvents,
+    Circle,
+} from "react-leaflet";
 import L from "leaflet";
 import axios from "axios";
 
@@ -20,7 +27,7 @@ function PanTo({ lat, lng }) {
     return null;
 }
 
-//fix city fix issue
+// fix city issue (remove "DS Division")
 function pickCity(addr, fallback = "") {
     const raw =
         addr.city ||
@@ -34,10 +41,8 @@ function pickCity(addr, fallback = "") {
         fallback;
 
     if (typeof raw !== "string") return fallback;
-
     return raw.replace(/\s*DS Division\s*/i, "").trim();
 }
-
 
 function ClickToPick({ onPick }) {
     useMapEvents({
@@ -65,13 +70,22 @@ function validateBranch(form) {
     if (!form.city?.trim()) errors.city = "City is required";
     if (!form.district?.trim()) errors.district = "District is required";
     if (!form.province?.trim()) errors.province = "Province is required";
-    if (form.latitude == null || Number.isNaN(Number(form.latitude))) errors.latitude = "Pick a location on the map";
-    if (form.longitude == null || Number.isNaN(Number(form.longitude))) errors.longitude = "Pick a location on the map";
+    if (form.latitude == null || Number.isNaN(Number(form.latitude)))
+        errors.latitude = "Pick a location on the map";
+    if (form.longitude == null || Number.isNaN(Number(form.longitude)))
+        errors.longitude = "Pick a location on the map";
+
+    // ✅ NEW: radius validation
+    const r = Number(form.radiusMeters);
+    if (!Number.isFinite(r) || r <= 0) errors.radiusMeters = "Radius must be > 0 meters";
+    if (r < 10) errors.radiusMeters = "Radius must be at least 10 meters";
+    if (r > 5000) errors.radiusMeters = "Radius must be 5000 meters or less";
+
     if (form.email?.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = "Invalid email";
     return errors;
 }
 
-// ✅ Parse backend wrapper: APIResponse<String> where data is JSON string
+// Parse backend wrapper: APIResponse<String> where data is JSON string
 function unwrapJson(wrapper) {
     try {
         if (!wrapper) return null;
@@ -83,14 +97,11 @@ function unwrapJson(wrapper) {
     }
 }
 
-// ✅ Axios error helper (keeps your same status logic)
+// Axios error helper
 function getAxiosErrorMessage(err, fallback = "Request failed") {
-    // Abort
     if (err?.code === "ERR_CANCELED") return "AbortError";
-
     const status = err?.response?.status;
     if (status) return `${fallback} (${status})`;
-
     return err?.message || fallback;
 }
 
@@ -106,6 +117,7 @@ export default function BranchesPage() {
         province: "",
         latitude: null,
         longitude: null,
+        radiusMeters: 200, // ✅ NEW default
         contactNumber: "",
         email: "",
         active: true,
@@ -125,7 +137,7 @@ export default function BranchesPage() {
         [form.latitude, form.longitude]
     );
 
-    // ✅ Search via Vite proxy (/api -> http://localhost:8080)
+    // Search via Vite proxy (/api -> http://localhost:8080)
     useEffect(() => {
         const q = debouncedQuery.trim();
         if (q.length < 4) {
@@ -143,17 +155,15 @@ export default function BranchesPage() {
 
                 const res = await axios.get("/api/v1/geocode/search", {
                     params: { q },
-                    signal: controller.signal, // ✅ AbortController works
+                    signal: controller.signal,
                 });
 
-                const wrapper = res.data;
-                const data = unwrapJson(wrapper);
-
+                const data = unwrapJson(res.data);
                 setSuggestions(Array.isArray(data) ? data : []);
                 setStatus(Array.isArray(data) && data.length ? "" : "No matches. Try more details.");
             } catch (e) {
                 const msg = getAxiosErrorMessage(e, "Search failed");
-                if (msg === "AbortError") return; // keep same logic as fetch AbortError
+                if (msg === "AbortError") return;
                 setStatus(msg);
             }
         })();
@@ -168,10 +178,7 @@ export default function BranchesPage() {
             ...prev,
             addressLine1: addr.road || addr.neighbourhood || prev.addressLine1,
             city: pickCity(addr, prev.city),
-            district:
-                addr.state_district ||
-                addr.county ||
-                prev.district,
+            district: addr.state_district || addr.county || prev.district,
             province: addr.state || prev.province,
             latitude: lat,
             longitude: lng,
@@ -185,7 +192,7 @@ export default function BranchesPage() {
 
     const reverseAbortRef = useRef(null);
 
-    // ✅ Reverse via Vite proxy
+    // Reverse via Vite proxy
     async function onPick(lat, lng) {
         setStatus("📍 Location set. Finding address...");
 
@@ -199,8 +206,7 @@ export default function BranchesPage() {
                 signal: controller.signal,
             });
 
-            const wrapper = res.data;
-            const data = unwrapJson(wrapper) || {};
+            const data = unwrapJson(res.data) || {};
             const addr = data.address || {};
 
             setForm((prev) => ({
@@ -213,11 +219,7 @@ export default function BranchesPage() {
                     addr.suburb ||
                     prev.addressLine1,
                 city: pickCity(addr, prev.city),
-                district:
-                    addr.state_district ||
-                    addr.county ||
-                    prev.district,
-
+                district: addr.state_district || addr.county || prev.district,
                 province: addr.state || prev.province,
             }));
 
@@ -231,7 +233,7 @@ export default function BranchesPage() {
         }
     }
 
-    // ✅ Use current location + auto-fill address
+    // Use current location + auto-fill address
     function useMyLocation() {
         if (!navigator.geolocation) {
             setStatus("Geolocation not supported.");
@@ -243,7 +245,7 @@ export default function BranchesPage() {
             (pos) => {
                 const { latitude, longitude, accuracy } = pos.coords;
                 setStatus(`📍 Location set (accuracy ~${Math.round(accuracy)}m). Filling address...`);
-                onPick(latitude, longitude); // ✅ reuse same reverse logic
+                onPick(latitude, longitude);
             },
             (err) => {
                 setStatus(err.code === 1 ? "Location permission denied." : "Failed to get location.");
@@ -271,6 +273,7 @@ export default function BranchesPage() {
             province: form.province.trim(),
             latitude: Number(form.latitude),
             longitude: Number(form.longitude),
+            radiusMeters: Number(form.radiusMeters), // ✅ NEW
             contactNumber: form.contactNumber.trim() || null,
             email: form.email.trim() || null,
             active: !!form.active,
@@ -280,7 +283,7 @@ export default function BranchesPage() {
             setSaving(true);
             setStatus("Saving...");
 
-            const res=await axios.post("/api/v1/branch", payload, {
+            const res = await axios.post("/api/v1/branch", payload, {
                 headers: { "Content-Type": "application/json" },
             });
 
@@ -301,7 +304,9 @@ export default function BranchesPage() {
         <div className="space-y-5">
             <div>
                 <div className="text-lg font-bold text-slate-900">Branches</div>
-                <div className="text-sm text-slate-600">Add a branch and pick its exact location on the map.</div>
+                <div className="text-sm text-slate-600">
+                    Add a branch and pick its exact location on the map. Set an allowed radius for check-ins.
+                </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
@@ -380,9 +385,25 @@ export default function BranchesPage() {
                             />
                         </div>
 
+                        {/* ✅ NEW: Radius + Contact */}
                         <div className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Contact Number" value={form.contactNumber} onChange={(v) => setField("contactNumber", v)} />
+                            <Field
+                                label="Allowed Radius (meters)"
+                                placeholder="e.g., 200"
+                                value={form.radiusMeters}
+                                onChange={(v) => setField("radiusMeters", v)}
+                                error={errors.radiusMeters}
+                            />
+                            <Field
+                                label="Contact Number"
+                                value={form.contactNumber}
+                                onChange={(v) => setField("contactNumber", v)}
+                            />
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
                             <Field label="Email" value={form.email} onChange={(v) => setField("email", v)} error={errors.email} />
+                            <div />
                         </div>
 
                         <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
@@ -431,11 +452,22 @@ export default function BranchesPage() {
 
                     <div className="overflow-hidden rounded-2xl">
                         <MapContainer center={mapCenter} zoom={13} style={{ height: 420, width: "100%" }}>
-                            <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                            <TileLayer
+                                attribution="© OpenStreetMap contributors"
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
                             <PanTo lat={form.latitude} lng={form.longitude} />
                             <ClickToPick onPick={onPick} />
+
                             {form.latitude != null && form.longitude != null && (
-                                <Marker position={[form.latitude, form.longitude]} icon={markerIcon} />
+                                <>
+                                    <Marker position={[form.latitude, form.longitude]} icon={markerIcon} />
+                                    {/* ✅ NEW: Show radius */}
+                                    <Circle
+                                        center={[form.latitude, form.longitude]}
+                                        radius={Number(form.radiusMeters) || 0}
+                                    />
+                                </>
                             )}
                         </MapContainer>
                     </div>
@@ -443,6 +475,10 @@ export default function BranchesPage() {
                     <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <MiniField label="Latitude" value={form.latitude ?? ""} />
                         <MiniField label="Longitude" value={form.longitude ?? ""} />
+                    </div>
+
+                    <div className="mt-2">
+                        <MiniField label="Radius (m)" value={form.radiusMeters ?? ""} />
                     </div>
                 </div>
             </div>
