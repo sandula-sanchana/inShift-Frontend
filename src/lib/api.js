@@ -1,3 +1,4 @@
+// src/lib/api.js
 import axios from "axios";
 import { ENV } from "./env";
 import { authStore } from "../features/auth/store";
@@ -14,9 +15,14 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    // Surface a friendly error message in UI
-    return Promise.reject(err);
-  }
+    (res) => res,
+    (err) => {
+      // If token expired/invalid -> force logout
+      if (err?.response?.status === 401) {
+        authStore.getState().clearSession?.();
+        authStore.getState().clear?.(); // in case old name exists
+        window.location.href = "/login";
+      }
+      return Promise.reject(err);
+    }
 );

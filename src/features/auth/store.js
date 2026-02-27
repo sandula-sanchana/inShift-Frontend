@@ -1,20 +1,27 @@
+// src/features/auth/store.js
 import { create } from "zustand";
 
+const TOKEN_KEY = "inshift_token";
+const USER_KEY = "inshift_user";
+
 export const authStore = create((set, get) => ({
-  token: localStorage.getItem("inshift_token") || "",
+  token: localStorage.getItem(TOKEN_KEY) || null,
   user: (() => {
-    const raw = localStorage.getItem("inshift_user");
+    const raw = localStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   })(),
+
+  isAuthed: () => Boolean(get().token),
+
   setSession: (token, user) => {
-    localStorage.setItem("inshift_token", token);
-    localStorage.setItem("inshift_user", JSON.stringify(user));
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
     set({ token, user });
   },
-  clear: () => {
-    localStorage.removeItem("inshift_token");
-    localStorage.removeItem("inshift_user");
-    set({ token: "", user: null });
+
+  clearSession: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    set({ token: null, user: null });
   },
-  isAuthed: () => !!get().token && !!get().user,
 }));
