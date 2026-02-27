@@ -274,14 +274,34 @@ export default function EmployeesPage() {
             setStatus(mode === "edit" ? "Updating..." : "Saving...");
 
             if (mode === "edit") {
+
                 await axios.put(`/api/v1/employees/${payload.employeeId}`, payload);
+
+                setStatus("✅ Updated!");
+
             } else {
-                await axios.post("/api/v1/employees", payload);
+
+                const res = await axios.post("/api/v1/employees", payload);
+
+                // unwrap APIResponse
+                const data = unwrapApi(res.data);
+
+                const tempPassword = data?.tempPassword;
+
+                if (tempPassword) {
+                    alert(
+                        `Employee Created Successfully!\n\n` +
+                        `Temporary Password:\n${tempPassword}\n\n` +
+                        `⚠️ Give this to the employee.`
+                    );
+                }
+
+                setStatus("✅ Created!");
             }
 
             setOpen(false);
-            setStatus("✅ Saved!");
             await loadAll();
+
         } catch (e) {
             setStatus(getAxiosErrorMessage(e, mode === "edit" ? "Update failed" : "Save failed"));
         } finally {

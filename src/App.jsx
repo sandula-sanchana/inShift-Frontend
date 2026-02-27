@@ -3,7 +3,6 @@ import { authStore } from "./features/auth/store";
 
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/auth_pages/Login.jsx";
-import Register from "./pages/auth_pages/Register.jsx";
 
 import EmployeeDashboard from "./pages/emp/EmployeeDashboard.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
@@ -24,7 +23,6 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
 
             {/* Employee App */}
             <Route
