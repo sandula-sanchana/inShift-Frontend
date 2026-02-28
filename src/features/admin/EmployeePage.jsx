@@ -172,8 +172,8 @@ export default function EmployeesPage() {
         setStatus("Loading employees...");
         try {
             const [empRes, brRes] = await Promise.all([
-                axios.get("/api/v1/employees", { signal: controller.signal }),
-                axios.get("/api/v1/branch", { signal: controller.signal }),
+                axios.get("/v1/admin/employees", { signal: controller.signal }),
+                axios.get("/v1/admin/branches", { signal: controller.signal }),
             ]);
 
             const emp = unwrapApi(empRes.data);
@@ -275,13 +275,13 @@ export default function EmployeesPage() {
 
             if (mode === "edit") {
 
-                await axios.put(`/api/v1/employees/${payload.employeeId}`, payload);
+                await axios.put(`/v1/admin/employees/${payload.employeeId}`, payload);
 
                 setStatus("✅ Updated!");
 
             } else {
 
-                const res = await axios.post("/api/v1/employees", payload);
+                const res = await axios.post("/v1/admin/employees", payload);
 
                 // unwrap APIResponse
                 const data = unwrapApi(res.data);
@@ -318,7 +318,7 @@ export default function EmployeesPage() {
 
         try {
             setStatus("Deleting...");
-            await axios.delete(`/api/v1/employees/${id}`);
+            await axios.delete(`/v1/admin/employees/${id}`);
             setStatus("✅ Deleted");
             await loadAll();
         } catch (e) {

@@ -153,7 +153,7 @@ export default function BranchesPage() {
             try {
                 setStatus("Searching address...");
 
-                const res = await axios.get("/api/v1/geocode/search", {
+                const res = await axios.get("/v1/admin/geocode/search", {
                     params: { q },
                     signal: controller.signal,
                 });
@@ -201,7 +201,7 @@ export default function BranchesPage() {
         reverseAbortRef.current = controller;
 
         try {
-            const res = await axios.get("/api/v1/geocode/reverse", {
+            const res = await axios.get("/v1/admin/geocode/reverse", {
                 params: { lat, lng },
                 signal: controller.signal,
             });
@@ -283,7 +283,7 @@ export default function BranchesPage() {
             setSaving(true);
             setStatus("Saving...");
 
-            const res = await axios.post("/api/v1/branch", payload, {
+            const res = await axios.post("/v1/admin/branches", payload, {
                 headers: { "Content-Type": "application/json" },
             });
 
