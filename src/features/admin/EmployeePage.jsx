@@ -1,25 +1,33 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
 import { Plus, Search, Pencil, Trash2, X, RefreshCw, Users } from "lucide-react";
 import { createPortal } from "react-dom";
+import { api } from "../../lib/api";
 
+// ======= CONFIG (change here if your paths differ) =======
+const EMP_BASE = "/v1/admin/employees";
+const BRANCH_BASE = "/v1/admin/branches";
+// =========================================================
 
-/** If you already have cn() util, you can remove this and import yours */
 function cn(...xs) {
     return xs.filter(Boolean).join(" ");
 }
 
-function unwrapApi(resData) {
-    // supports APIResponse<T> { code,message,data }
-    return resData?.data ?? resData;
+// -------- APIResponse helpers --------
+function unwrapApiResponse(resData) {
+    if (resData && typeof resData === "object" && "data" in resData) return resData.data;
+    return resData;
 }
-
-function getAxiosErrorMessage(err, fallback = "Request failed") {
-    if (err?.code === "ERR_CANCELED") return "Canceled";
+function apiMessage(resData) {
+    return resData?.message || resData?.msg || "";
+}
+function getErrorMessage(err, fallback = "Request failed") {
+    const msgFromBackend = err?.response?.data?.message || err?.response?.data?.msg;
+    if (msgFromBackend) return msgFromBackend;
     const s = err?.response?.status;
     if (s) return `${fallback} (${s})`;
     return err?.message || fallback;
 }
+// -------------------------------------
 
 function validateEmployee(form) {
     const e = {};
@@ -31,19 +39,12 @@ function validateEmployee(form) {
     return e;
 }
 
-/** Slide-over drawer (hidden until open=true) */
 function SlideOver({ open, title, subtitle, children, onClose }) {
     if (!open) return null;
 
     return createPortal(
         <div className="fixed inset-0 z-[9999]">
-            {/* Backdrop */}
-            <div
-                onClick={onClose}
-                className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]"
-            />
-
-            {/* Panel */}
+            <div onClick={onClose} className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]" />
             <div className="absolute right-0 top-0 h-full w-full sm:w-[560px] bg-white shadow-2xl">
                 <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600">
                     <div className="flex items-start justify-between gap-3">
@@ -52,26 +53,18 @@ function SlideOver({ open, title, subtitle, children, onClose }) {
                             {subtitle && <div className="text-xs text-white/80 mt-0.5">{subtitle}</div>}
                         </div>
 
-                        <button
-                            onClick={onClose}
-                            className="rounded-xl p-2 text-white/90 hover:bg-white/10"
-                            aria-label="Close"
-                        >
+                        <button onClick={onClose} className="rounded-xl p-2 text-white/90 hover:bg-white/10" aria-label="Close">
                             <X className="h-5 w-5" />
                         </button>
                     </div>
                 </div>
 
-                <div className="p-5 sm:p-6 overflow-y-auto h-[calc(100%-64px)]">
-                    {children}
-                </div>
+                <div className="p-5 sm:p-6 overflow-y-auto h-[calc(100%-64px)]">{children}</div>
             </div>
         </div>,
         document.body
     );
 }
-
-
 
 function Field({ label, value, onChange, placeholder, error, type = "text" }) {
     return (
@@ -139,7 +132,6 @@ export default function EmployeesPage() {
     const [status, setStatus] = useState("");
     const [loading, setLoading] = useState(false);
 
-    // drawer
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState("create"); // create | edit
     const [saving, setSaving] = useState(false);
@@ -160,7 +152,6 @@ export default function EmployeesPage() {
     );
 
     const [form, setForm] = useState(emptyForm);
-
     const abortRef = useRef(null);
 
     async function loadAll() {
@@ -172,19 +163,19 @@ export default function EmployeesPage() {
         setStatus("Loading employees...");
         try {
             const [empRes, brRes] = await Promise.all([
-                axios.get("/v1/admin/employees", { signal: controller.signal }),
-                axios.get("/v1/admin/branches", { signal: controller.signal }),
+                api.get(EMP_BASE, { signal: controller.signal }),
+                api.get(BRANCH_BASE, { signal: controller.signal }),
             ]);
 
-            const emp = unwrapApi(empRes.data);
-            const br = unwrapApi(brRes.data);
+            const emp = unwrapApiResponse(empRes.data);
+            const br = unwrapApiResponse(brRes.data);
 
             setEmployees(Array.isArray(emp) ? emp : []);
             setBranches(Array.isArray(br) ? br : []);
             setStatus("");
         } catch (e) {
             if (e?.code === "ERR_CANCELED") return;
-            setStatus(getAxiosErrorMessage(e, "Load failed"));
+            setStatus(getErrorMessage(e, "Load failed"));
         } finally {
             setLoading(false);
         }
@@ -274,36 +265,28 @@ export default function EmployeesPage() {
             setStatus(mode === "edit" ? "Updating..." : "Saving...");
 
             if (mode === "edit") {
-
-                await axios.put(`/v1/admin/employees/${payload.employeeId}`, payload);
-
+                await api.put(`${EMP_BASE}/${payload.employeeId}`, payload);
                 setStatus("✅ Updated!");
-
             } else {
+                const res = await api.post(EMP_BASE, payload);
 
-                const res = await axios.post("/v1/admin/employees", payload);
-
-                // unwrap APIResponse
-                const data = unwrapApi(res.data);
-
+                // your create endpoint returns APIResponse<Map<String,Object>> { tempPassword: "..." }
+                const data = unwrapApiResponse(res.data);
                 const tempPassword = data?.tempPassword;
 
                 if (tempPassword) {
                     alert(
-                        `Employee Created Successfully!\n\n` +
-                        `Temporary Password:\n${tempPassword}\n\n` +
-                        `⚠️ Give this to the employee.`
+                        `Employee Created Successfully!\n\nTemporary Password:\n${tempPassword}\n\n⚠️ Give this to the employee.`
                     );
                 }
 
-                setStatus("✅ Created!");
+                setStatus(apiMessage(res.data) || "✅ Created!");
             }
 
             setOpen(false);
             await loadAll();
-
         } catch (e) {
-            setStatus(getAxiosErrorMessage(e, mode === "edit" ? "Update failed" : "Save failed"));
+            setStatus(getErrorMessage(e, mode === "edit" ? "Update failed" : "Save failed"));
         } finally {
             setSaving(false);
         }
@@ -318,17 +301,16 @@ export default function EmployeesPage() {
 
         try {
             setStatus("Deleting...");
-            await axios.delete(`/v1/admin/employees/${id}`);
+            await api.delete(`${EMP_BASE}/${id}`);
             setStatus("✅ Deleted");
             await loadAll();
         } catch (e) {
-            setStatus(getAxiosErrorMessage(e, "Delete failed"));
+            setStatus(getErrorMessage(e, "Delete failed"));
         }
     }
 
     return (
         <div className="space-y-5">
-            {/* header */}
             <div className="rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 text-white shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -351,7 +333,6 @@ export default function EmployeesPage() {
                 </div>
             </div>
 
-            {/* toolbar */}
             <div className="flex flex-wrap items-center gap-3">
                 <div className="relative flex-1 min-w-[220px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -374,9 +355,7 @@ export default function EmployeesPage() {
                 {status && <div className="text-sm text-slate-600">{status}</div>}
             </div>
 
-            {/* list container */}
             <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden">
-                {/* desktop table */}
                 <div className="hidden lg:block">
                     <table className="w-full text-sm">
                         <thead className="bg-gradient-to-r from-indigo-50 via-purple-50 to-cyan-50 text-slate-700">
@@ -390,6 +369,7 @@ export default function EmployeesPage() {
                             <th className="px-4 py-3" />
                         </tr>
                         </thead>
+
                         <tbody>
                         {filtered.map((e) => (
                             <tr key={e.employeeId ?? e.id} className="border-t hover:bg-slate-50/60">
@@ -397,9 +377,7 @@ export default function EmployeesPage() {
                                 <td className="px-4 py-3 font-semibold text-slate-900">{e.fullName}</td>
                                 <td className="px-4 py-3 text-slate-700">{e.email ?? "—"}</td>
                                 <td className="px-4 py-3 text-slate-700">{e.phone ?? "—"}</td>
-                                <td className="px-4 py-3 text-slate-700">
-                                    {e.branchName ?? e.branch?.branchName ?? e.branchCode ?? "—"}
-                                </td>
+                                <td className="px-4 py-3 text-slate-700">{e.branchName ?? e.branch?.branchName ?? e.branchCode ?? "—"}</td>
                                 <td className="px-4 py-3">
                                     <Badge active={!!e.active} />
                                 </td>
@@ -435,10 +413,12 @@ export default function EmployeesPage() {
                     </table>
                 </div>
 
-                {/* mobile cards */}
                 <div className="lg:hidden p-3 sm:p-4 space-y-3">
                     {filtered.map((e) => (
-                        <div key={e.employeeId ?? e.id} className="rounded-3xl border border-slate-200 p-4 bg-gradient-to-b from-white to-indigo-50/30">
+                        <div
+                            key={e.employeeId ?? e.id}
+                            className="rounded-3xl border border-slate-200 p-4 bg-gradient-to-b from-white to-indigo-50/30"
+                        >
                             <div className="flex items-start justify-between gap-3">
                                 <div>
                                     <div className="text-sm font-semibold text-slate-900">{e.fullName}</div>
@@ -448,11 +428,14 @@ export default function EmployeesPage() {
                             </div>
 
                             <div className="mt-3 grid gap-1 text-sm text-slate-700">
-                                <div><span className="text-slate-500">Email:</span> {e.email ?? "—"}</div>
-                                <div><span className="text-slate-500">Phone:</span> {e.phone ?? "—"}</div>
                                 <div>
-                                    <span className="text-slate-500">Branch:</span>{" "}
-                                    {e.branchName ?? e.branch?.branchName ?? "—"}
+                                    <span className="text-slate-500">Email:</span> {e.email ?? "—"}
+                                </div>
+                                <div>
+                                    <span className="text-slate-500">Phone:</span> {e.phone ?? "—"}
+                                </div>
+                                <div>
+                                    <span className="text-slate-500">Branch:</span> {e.branchName ?? e.branch?.branchName ?? "—"}
                                 </div>
                             </div>
 
@@ -479,7 +462,6 @@ export default function EmployeesPage() {
                 </div>
             </div>
 
-            {/* drawer (form not visible until open) */}
             <SlideOver
                 open={open}
                 title={mode === "edit" ? "Edit Employee" : "Add Employee"}

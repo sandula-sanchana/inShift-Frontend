@@ -1,11 +1,10 @@
 // src/lib/api.js
 import axios from "axios";
-import { ENV } from "./env";
 import { authStore } from "../features/auth/store";
 
 export const api = axios.create({
-  baseURL: ENV.API_BASE_URL,
-  timeout: 15000,
+    baseURL: "/api",
+    timeout: 15000,
 });
 
 api.interceptors.request.use((config) => {

@@ -4,7 +4,7 @@ import { LayoutDashboard, Users, MapPin, Settings, LogOut } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { authStore } from "../../features/auth/store";
 import { LogoMark } from "../../components/common/Logo";
-import BranchesPage from "../../features/admin/branch/BranchesPage.jsx";
+import BranchesPage from "../../features/admin/BranchesPage.jsx";
 import EmployeesPage from "../../features/admin/EmployeePage.jsx";
 
 function NavItem({ to, icon: Icon, label }) {

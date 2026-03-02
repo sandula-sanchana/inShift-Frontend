@@ -28,7 +28,7 @@ export default function Login() {
     try {
       // Backend expects: { email, password }
       // Backend returns (your wrapper): { status, message, data: { accessToken, role } }
-      const res = await api.post("/api/v1/auth/login", { email, password });
+      const res = await api.post("/v1/auth/login", { email, password });
 
       const data = res?.data?.data;
       const accessToken = data?.accessToken ?? data?.access_token; // supports either naming
