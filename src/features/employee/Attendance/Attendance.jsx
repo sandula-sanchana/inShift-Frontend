@@ -1,28 +1,51 @@
 import React, { useMemo, useState } from "react";
-import axios from "axios";
-import { authStore } from "../../auth/store";
-import { MapPin, Loader2, AlertTriangle } from "lucide-react";
+import { MapPin, Loader2, AlertTriangle, Info } from "lucide-react";
+import { api } from "../../../lib/api.js";
 
-const API = "http://localhost:8080/api/v1/attendance";
-
-// tweak these
-const MAX_OK_ACCURACY = 120;   // meters: accept as “good enough” mobile
+const ATT_BASE = "/v1/attendance";
+const MAX_OK_ACCURACY = 120; // meters
 const MAX_WAIT_MS = 12000;
 
-export default function Attendance() {
-    const { token } = authStore();
+const isMobileDevice = () =>
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
+function unwrapApiResponse(resData) {
+    if (resData && typeof resData === "object" && "data" in resData) return resData.data;
+    return resData;
+}
+
+function getErrorMessage(err, fallback = "Request failed") {
+    const msgFromBackend = err?.response?.data?.message || err?.response?.data?.msg;
+    if (msgFromBackend) return msgFromBackend;
+    const status = err?.response?.status;
+    if (status) return `${fallback} (${status})`;
+    return err?.message || fallback;
+}
+
+function geoErrorMessage(e) {
+    // 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
+    if (e?.code === 1) return "Location permission denied.";
+    if (e?.code === 2) return "Location unavailable (GPS/Location Services may be off).";
+    if (e?.code === 3) return "Location request timed out.";
+    return "Could not get location.";
+}
+
+export default function Attendance() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
     const [attendance, setAttendance] = useState(null);
 
     const [accuracy, setAccuracy] = useState(null);
     const [lastCoords, setLastCoords] = useState(null);
 
-    // fallback modal state
+    // fallback modal
     const [showFallback, setShowFallback] = useState(false);
     const [pendingType, setPendingType] = useState(null);
     const [webReason, setWebReason] = useState("");
+
+    // guidance panel when permission denied etc.
+    const [showHelp, setShowHelp] = useState(false);
 
     const accuracyLabel = useMemo(() => {
         if (accuracy == null) return null;
@@ -49,49 +72,50 @@ export default function Attendance() {
                     resolve(coords);
                 },
                 (e) => reject(e),
-                {
-                    enableHighAccuracy: true,
-                    timeout: MAX_WAIT_MS,
-                    maximumAge: 0,
-                }
+                { enableHighAccuracy: true, timeout: MAX_WAIT_MS, maximumAge: 0 }
             );
         });
 
-    const callPunch = async (endpoint, payload) => {
-        const res = await axios.post(`${API}${endpoint}`, payload, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        setAttendance(res.data.data);
+    const callPunch = async (path, payload) => {
+        const res = await api.post(`${ATT_BASE}${path}`, payload);
+        const data = unwrapApiResponse(res.data);
+        setAttendance(data);
     };
 
-    const punchMobile = async (type) => {
-        setLoading(true);
+    const punch = async (type) => {
         setError(null);
+        setShowHelp(false);
+
+        // ✅ PC: manual flow (no GPS)
+        if (!isMobileDevice()) {
+            setPendingType(type);
+            setShowFallback(true);
+            return;
+        }
+
+        // ✅ Mobile: GPS flow
+        setLoading(true);
 
         try {
             const coords = await getLocation();
 
-            // ✅ If accuracy too poor, offer fallback instead of failing the whole project
             if (coords.accuracy > MAX_OK_ACCURACY) {
+                setError(
+                    `Location accuracy is too low (${coords.accuracy}m). Turn on High Accuracy / GPS and try again, or submit as Web (Pending).`
+                );
                 setPendingType(type);
                 setShowFallback(true);
                 return;
             }
 
             await callPunch("/punch/mobile", { type, lat: coords.lat, lng: coords.lng });
-        } catch (err) {
-            // permission denied / timeout / etc
-            const msg =
-                err?.code === 1
-                    ? "Location permission denied. Please allow location or use Web attendance."
-                    : err?.code === 3
-                        ? "Location timed out. Turn on Wi-Fi/GPS and try again."
-                        : err?.message || "Something went wrong";
+        } catch (e) {
+            const msg = geoErrorMessage(e);
+            setError(`${msg} Please enable location permission and try again, or submit as Web (Pending).`);
+            setShowHelp(true);
 
-            // If location fails, also offer fallback
             setPendingType(type);
             setShowFallback(true);
-            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -99,6 +123,7 @@ export default function Attendance() {
 
     const submitWebFallback = async () => {
         if (!pendingType) return;
+
         if (!webReason.trim()) {
             setError("Please enter a reason for Web attendance.");
             return;
@@ -108,10 +133,10 @@ export default function Attendance() {
         setError(null);
 
         try {
-            // WEB: no GPS required. You can still send coords if you want (optional).
             await callPunch("/punch/web", {
                 type: pendingType,
                 reason: webReason.trim(),
+                // optional: include last coords if we have them
                 lat: lastCoords?.lat ?? null,
                 lng: lastCoords?.lng ?? null,
             });
@@ -119,11 +144,17 @@ export default function Attendance() {
             setShowFallback(false);
             setWebReason("");
             setPendingType(null);
-        } catch (err) {
-            setError(err?.response?.data?.message || err.message || "Something went wrong");
+        } catch (e) {
+            setError(getErrorMessage(e, "Web attendance failed"));
         } finally {
             setLoading(false);
         }
+    };
+
+    const closeModal = () => {
+        setShowFallback(false);
+        setWebReason("");
+        setPendingType(null);
     };
 
     const statusColor =
@@ -139,7 +170,7 @@ export default function Attendance() {
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-slate-900">Attendance</h1>
                 <p className="text-sm text-slate-500 mt-2">
-                    Mark attendance with location when available. If accuracy is poor (common on PCs), submit as Web (Pending).
+                    Mobile uses GPS verification. PC uses manual Web attendance (Pending approval).
                 </p>
             </div>
 
@@ -157,8 +188,8 @@ export default function Attendance() {
                 </div>
             </div>
 
-            {/* Accuracy pill */}
-            {accuracy != null && accuracyLabel && (
+            {/* Accuracy (mobile only) */}
+            {isMobileDevice() && accuracy != null && accuracyLabel && (
                 <div className="mt-6 flex justify-center">
                     <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1 ${accuracyLabel.cls}`}>
                         <MapPin className="h-4 w-4" />
@@ -170,7 +201,7 @@ export default function Attendance() {
             {/* Actions */}
             <div className="mt-10 space-y-4">
                 <button
-                    onClick={() => punchMobile("IN")}
+                    onClick={() => punch("IN")}
                     disabled={loading}
                     className="w-full rounded-2xl bg-slate-900 text-white py-3 text-lg font-semibold hover:bg-slate-800 transition disabled:opacity-50"
                 >
@@ -185,7 +216,7 @@ export default function Attendance() {
                 </button>
 
                 <button
-                    onClick={() => punchMobile("OUT")}
+                    onClick={() => punch("OUT")}
                     disabled={loading}
                     className="w-full rounded-2xl bg-red-600 text-white py-3 text-lg font-semibold hover:bg-red-700 transition disabled:opacity-50"
                 >
@@ -194,8 +225,36 @@ export default function Attendance() {
             </div>
 
             {/* Error */}
-            {error && (
-                <div className="mt-6 bg-red-50 text-red-600 text-sm p-3 rounded-xl text-center">{error}</div>
+            {error && <div className="mt-6 bg-red-50 text-red-700 text-sm p-3 rounded-xl text-center">{error}</div>}
+
+            {/* Help (Android/iPhone) */}
+            {showHelp && isMobileDevice() && (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                        <Info className="h-4 w-4" />
+                        How to enable location (Android / iPhone)
+                    </div>
+
+                    <div className="mt-3 grid gap-3 text-sm text-slate-700">
+                        <div className="rounded-xl bg-slate-50 p-3">
+                            <div className="font-semibold">Android (Chrome)</div>
+                            <ul className="mt-1 list-disc pl-5 space-y-1">
+                                <li>Turn on <b>Location</b> (GPS) from Quick Settings.</li>
+                                <li>Chrome → Site settings → <b>Location</b> → Allow.</li>
+                                <li>Set Location mode to <b>High accuracy</b> (Settings → Location).</li>
+                            </ul>
+                        </div>
+
+                        <div className="rounded-xl bg-slate-50 p-3">
+                            <div className="font-semibold">iPhone (Safari)</div>
+                            <ul className="mt-1 list-disc pl-5 space-y-1">
+                                <li>Settings → Privacy & Security → <b>Location Services</b> → ON.</li>
+                                <li>Settings → Safari → <b>Location</b> → Allow (or Ask).</li>
+                                <li>Refresh the page and try again.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Fallback Modal */}
@@ -207,13 +266,20 @@ export default function Attendance() {
                                 <AlertTriangle className="h-5 w-5 text-yellow-700" />
                             </div>
                             <div className="flex-1">
-                                <div className="text-base font-semibold text-slate-900">
-                                    Location is not reliable on this device
-                                </div>
+                                <div className="text-base font-semibold text-slate-900">Web Attendance (Manual)</div>
+
                                 <div className="mt-1 text-sm text-slate-600">
-                                    Your location accuracy is {accuracy ?? "unknown"}m (often happens on PCs). You can submit as{" "}
-                                    <span className="font-semibold">Web Attendance</span> and it will be{" "}
-                                    <span className="font-semibold">Pending</span> for approval.
+                                    {!isMobileDevice() ? (
+                                        <>
+                                            You are using a <b>PC</b>. Web attendance requires a reason and will be{" "}
+                                            <b>PENDING</b> until approved.
+                                        </>
+                                    ) : (
+                                        <>
+                                            Location is not reliable (accuracy: {accuracy ?? "unknown"}m). You can submit Web attendance →{" "}
+                                            <b>PENDING</b>.
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -225,7 +291,7 @@ export default function Attendance() {
                                 onChange={(e) => setWebReason(e.target.value)}
                                 rows={3}
                                 className="mt-1 w-full rounded-2xl border border-slate-200 p-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                                placeholder="Example: PC accuracy too low, marking manually from office."
+                                placeholder="Example: Marking from office PC / GPS permission issue / accuracy too low."
                             />
                         </div>
 
@@ -235,19 +301,19 @@ export default function Attendance() {
                                 disabled={loading}
                                 onClick={submitWebFallback}
                             >
-                                Submit as Web (Pending)
+                                {loading ? "Submitting..." : "Submit (Pending)"}
                             </button>
                             <button
-                                className="flex-1 rounded-2xl bg-white text-slate-700 py-2.5 text-sm font-semibold ring-1 ring-slate-200 hover:bg-slate-50"
+                                className="flex-1 rounded-2xl bg-white text-slate-700 py-2.5 text-sm font-semibold ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
                                 disabled={loading}
-                                onClick={() => {
-                                    setShowFallback(false);
-                                    setWebReason("");
-                                    setPendingType(null);
-                                }}
+                                onClick={closeModal}
                             >
                                 Cancel
                             </button>
+                        </div>
+
+                        <div className="mt-3 text-xs text-slate-500">
+                            Note: Web attendance is reviewed by an administrator. All actions are recorded in the audit log.
                         </div>
                     </div>
                 </div>
