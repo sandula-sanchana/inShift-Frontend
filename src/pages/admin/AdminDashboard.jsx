@@ -1,11 +1,12 @@
 import React, { useMemo } from "react";
 import { NavLink, useNavigate, Routes, Route, Navigate } from "react-router-dom";
-import { LayoutDashboard, Users, MapPin, Settings, LogOut } from "lucide-react";
+import {LayoutDashboard, Users, MapPin, Settings, LogOut, CalendarClock} from "lucide-react";
 import { cn } from "../../lib/cn";
 import { authStore } from "../../features/auth/store";
 import { LogoMark } from "../../components/common/Logo";
 import BranchesPage from "../../features/admin/BranchesPage.jsx";
 import EmployeesPage from "../../features/admin/EmployeePage.jsx";
+import AdminAttendancePage from "../../features/admin/AdminAttendancePage.jsx";
 
 function NavItem({ to, icon: Icon, label }) {
     return (
@@ -96,6 +97,7 @@ export default function AdminDashboard() {
             { to: "/admin", icon: LayoutDashboard, label: "Overview" },
             { to: "/admin/employees", icon: Users, label: "Employees" },
             { to: "/admin/branches", icon: MapPin, label: "Branches" },
+            { to: "/admin/attendance", icon: CalendarClock, label: "Attendance" },
             { to: "/admin/georules", icon: MapPin, label: "Geo Rules" },
             { to: "/admin/settings", icon: Settings, label: "Admin Settings" },
         ],
@@ -168,6 +170,7 @@ export default function AdminDashboard() {
                                         path="georules"
                                         element={<div className="text-slate-900 font-semibold animate-in fade-in duration-500">Geo Rules Configuration</div>}
                                     />
+                                    <Route path="attendance" element={<AdminAttendancePage />} />
                                     <Route
                                         path="settings"
                                         element={<div className="text-slate-900 font-semibold animate-in fade-in duration-500">System Settings</div>}
