@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { MapPin, Loader2, AlertTriangle, Info } from "lucide-react";
 import { api } from "../../../lib/api.js";
 
-const ATT_BASE = "/v1/attendance";
+const ATT_BASE = "/v1/emp/attendance";
 const MAX_OK_ACCURACY = 120; // meters
 const MAX_WAIT_MS = 12000;
 

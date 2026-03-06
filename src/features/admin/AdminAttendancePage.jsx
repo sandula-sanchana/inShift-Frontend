@@ -14,7 +14,7 @@ import {
     CalendarClock,
 } from "lucide-react";
 
-const BASE = "/api/v1/admin/attendance";
+const BASE = "/v1/admin/attendance";
 
 function unwrapApiResponse(resData) {
     if (resData && typeof resData === "object" && "data" in resData) return resData.data;

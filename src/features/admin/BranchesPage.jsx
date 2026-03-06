@@ -5,7 +5,7 @@ import { api } from "../../lib/api.js";
 
 // ======= CONFIG (change here if your paths differ) =======
 const GEO_BASE = "/v1/admin/geocode";
-const BRANCH_BASE = "/v1/admin/branch"; // change to "/v1/admin/branches" if your backend uses plural
+const BRANCH_BASE = "/v1/admin/branches";
 // =========================================================
 
 // Fix leaflet default marker in Vite
