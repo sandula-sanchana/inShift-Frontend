@@ -19,6 +19,7 @@ import Notifications from "../../features/employee/notification/Notifications.js
 import Attendance from "../../features/employee/Attendance/Attendance.jsx";
 import Verify from "../../features/employee/verification/Verify.jsx";
 import Shifts from "../../features/employee/shifts/Shifts.jsx";
+import Security from "../../features/employee/security.jsx";
 
 function NavItem({ to, icon: Icon, label }) {
     return (
@@ -153,7 +154,7 @@ export default function EmployeeDashboard() {
                             <Route path="verify" element={<Verify />} />
                             <Route path="shifts" element={<Shifts />} />
                             <Route path="ot" element={<div className="text-slate-900 font-semibold">My OT Page</div>} />
-                            <Route path="security" element={<div className="text-slate-900 font-semibold">Security Page</div>} />
+                            <Route path="security" element={<Security />} />
                             <Route path="*" element={<Navigate to="/emp" replace />} />
                         </Routes>
                     </main>
