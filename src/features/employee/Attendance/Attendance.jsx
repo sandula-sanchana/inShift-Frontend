@@ -1,8 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { MapPin, Loader2, AlertTriangle, Info } from "lucide-react";
+import { MapPin, Loader2, AlertTriangle, Info, Fingerprint } from "lucide-react";
+import * as webauthnJson from "@github/webauthn-json";
 import { api } from "../../../lib/api.js";
 
 const ATT_BASE = "/v1/emp/attendance";
+const PASSKEY_BASE = "/v1/emp/passkey";
+
 const MAX_OK_ACCURACY = 120; // meters
 const MAX_WAIT_MS = 12000;
 
@@ -15,7 +18,11 @@ function unwrapApiResponse(resData) {
 }
 
 function getErrorMessage(err, fallback = "Request failed") {
-    const msgFromBackend = err?.response?.data?.message || err?.response?.data?.msg;
+    const msgFromBackend =
+        err?.response?.data?.message ||
+        err?.response?.data?.msg ||
+        err?.response?.data?.data?.message;
+
     if (msgFromBackend) return msgFromBackend;
     const status = err?.response?.status;
     if (status) return `${fallback} (${status})`;
@@ -23,7 +30,6 @@ function getErrorMessage(err, fallback = "Request failed") {
 }
 
 function geoErrorMessage(e) {
-    // 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT
     if (e?.code === 1) return "Location permission denied.";
     if (e?.code === 2) return "Location unavailable (GPS/Location Services may be off).";
     if (e?.code === 3) return "Location request timed out.";
@@ -39,13 +45,12 @@ export default function Attendance() {
     const [accuracy, setAccuracy] = useState(null);
     const [lastCoords, setLastCoords] = useState(null);
 
-    // fallback modal
     const [showFallback, setShowFallback] = useState(false);
     const [pendingType, setPendingType] = useState(null);
     const [webReason, setWebReason] = useState("");
 
-    // guidance panel when permission denied etc.
     const [showHelp, setShowHelp] = useState(false);
+    const [verifyingPasskey, setVerifyingPasskey] = useState(false);
 
     const accuracyLabel = useMemo(() => {
         if (accuracy == null) return null;
@@ -61,13 +66,14 @@ export default function Attendance() {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     const acc = Math.round(pos.coords.accuracy);
-                    setAccuracy(acc);
 
                     const coords = {
                         lat: pos.coords.latitude,
                         lng: pos.coords.longitude,
                         accuracy: acc,
                     };
+
+                    setAccuracy(acc);
                     setLastCoords(coords);
                     resolve(coords);
                 },
@@ -75,6 +81,33 @@ export default function Attendance() {
                 { enableHighAccuracy: true, timeout: MAX_WAIT_MS, maximumAge: 0 }
             );
         });
+
+    const verifyPasskey = async () => {
+        setVerifyingPasskey(true);
+
+        try {
+            const res = await api.post(`${PASSKEY_BASE}/assertion/options`);
+            const optionsJson = res?.data?.data;
+
+            if (!optionsJson) {
+                throw new Error("No passkey assertion options received from server");
+            }
+
+            const requestOptions = JSON.parse(optionsJson);
+
+            const credential = await webauthnJson.get(requestOptions);
+
+            if (!credential) {
+                throw new Error("Passkey verification was cancelled or failed");
+            }
+
+            await api.post(`${PASSKEY_BASE}/assertion/verify`, {
+                credentialJson: JSON.stringify(credential),
+            });
+        } finally {
+            setVerifyingPasskey(false);
+        }
+    };
 
     const callPunch = async (path, payload) => {
         const res = await api.post(`${ATT_BASE}${path}`, payload);
@@ -86,17 +119,17 @@ export default function Attendance() {
         setError(null);
         setShowHelp(false);
 
-        // ✅ PC: manual flow (no GPS)
+        // PC / laptop -> fallback manual flow
         if (!isMobileDevice()) {
             setPendingType(type);
             setShowFallback(true);
             return;
         }
 
-        // ✅ Mobile: GPS flow
         setLoading(true);
 
         try {
+            // 1) get GPS first
             const coords = await getLocation();
 
             if (coords.accuracy > MAX_OK_ACCURACY) {
@@ -108,14 +141,17 @@ export default function Attendance() {
                 return;
             }
 
-            await callPunch("/punch/mobile", { type, lat: coords.lat, lng: coords.lng });
-        } catch (e) {
-            const msg = geoErrorMessage(e);
-            setError(`${msg} Please enable location permission and try again, or submit as Web (Pending).`);
-            setShowHelp(true);
+            // 2) verify passkey / fingerprint
+            await verifyPasskey();
 
-            setPendingType(type);
-            setShowFallback(true);
+            // 3) if passkey success, mark attendance
+            await callPunch("/punch/mobile", {
+                type,
+                lat: coords.lat,
+                lng: coords.lng,
+            });
+        } catch (e) {
+            setError(getErrorMessage(e, "Attendance verification failed"));
         } finally {
             setLoading(false);
         }
@@ -136,7 +172,6 @@ export default function Attendance() {
             await callPunch("/punch/web", {
                 type: pendingType,
                 reason: webReason.trim(),
-                // optional: include last coords if we have them
                 lat: lastCoords?.lat ?? null,
                 lng: lastCoords?.lng ?? null,
             });
@@ -164,31 +199,34 @@ export default function Attendance() {
                 ? "bg-yellow-500"
                 : "bg-slate-300";
 
+    const actionBusy = loading || verifyingPasskey;
+
     return (
         <div className="max-w-xl mx-auto py-10 px-4">
-            {/* Header */}
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-slate-900">Attendance</h1>
                 <p className="text-sm text-slate-500 mt-2">
-                    Mobile uses GPS verification. PC uses manual Web attendance (Pending approval).
+                    Mobile uses GPS + passkey biometric verification. PC uses manual Web attendance (Pending approval).
                 </p>
             </div>
 
-            {/* Status Circle */}
             <div className="mt-10 flex justify-center">
                 <div className="relative">
                     <div className={`h-40 w-40 rounded-full ${statusColor} opacity-20`} />
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <div className="text-sm text-slate-500">{attendance ? attendance.type : "Not Marked"}</div>
+                        <div className="text-sm text-slate-500">
+                            {attendance ? attendance.type : "Not Marked"}
+                        </div>
                         <div className="text-xl font-bold text-slate-900 mt-1">
                             {attendance ? new Date(attendance.eventTime).toLocaleTimeString() : "-- : --"}
                         </div>
-                        <div className="text-xs text-slate-500 mt-1">{attendance ? attendance.status : "No record"}</div>
+                        <div className="text-xs text-slate-500 mt-1">
+                            {attendance ? attendance.status : "No record"}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Accuracy (mobile only) */}
             {isMobileDevice() && accuracy != null && accuracyLabel && (
                 <div className="mt-6 flex justify-center">
                     <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1 ${accuracyLabel.cls}`}>
@@ -198,18 +236,26 @@ export default function Attendance() {
                 </div>
             )}
 
-            {/* Actions */}
+            {isMobileDevice() && (
+                <div className="mt-4 flex justify-center">
+                    <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1 bg-slate-50 text-slate-700 ring-slate-200">
+                        <Fingerprint className="h-4 w-4" />
+                        Mobile attendance requires passkey verification
+                    </div>
+                </div>
+            )}
+
             <div className="mt-10 space-y-4">
                 <button
                     onClick={() => punch("IN")}
-                    disabled={loading}
+                    disabled={actionBusy}
                     className="w-full rounded-2xl bg-slate-900 text-white py-3 text-lg font-semibold hover:bg-slate-800 transition disabled:opacity-50"
                 >
-                    {loading ? (
+                    {actionBusy ? (
                         <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Processing...
-            </span>
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            {verifyingPasskey ? "Verifying fingerprint..." : "Processing..."}
+                        </span>
                     ) : (
                         "Check In"
                     )}
@@ -217,17 +263,19 @@ export default function Attendance() {
 
                 <button
                     onClick={() => punch("OUT")}
-                    disabled={loading}
+                    disabled={actionBusy}
                     className="w-full rounded-2xl bg-red-600 text-white py-3 text-lg font-semibold hover:bg-red-700 transition disabled:opacity-50"
                 >
-                    {loading ? "Processing..." : "Check Out"}
+                    {actionBusy ? "Processing..." : "Check Out"}
                 </button>
             </div>
 
-            {/* Error */}
-            {error && <div className="mt-6 bg-red-50 text-red-700 text-sm p-3 rounded-xl text-center">{error}</div>}
+            {error && (
+                <div className="mt-6 bg-red-50 text-red-700 text-sm p-3 rounded-xl text-center">
+                    {error}
+                </div>
+            )}
 
-            {/* Help (Android/iPhone) */}
             {showHelp && isMobileDevice() && (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -241,7 +289,7 @@ export default function Attendance() {
                             <ul className="mt-1 list-disc pl-5 space-y-1">
                                 <li>Turn on <b>Location</b> (GPS) from Quick Settings.</li>
                                 <li>Chrome → Site settings → <b>Location</b> → Allow.</li>
-                                <li>Set Location mode to <b>High accuracy</b> (Settings → Location).</li>
+                                <li>Set Location mode to <b>High accuracy</b>.</li>
                             </ul>
                         </div>
 
@@ -257,7 +305,6 @@ export default function Attendance() {
                 </div>
             )}
 
-            {/* Fallback Modal */}
             {showFallback && (
                 <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
                     <div className="w-full max-w-md rounded-3xl bg-white shadow-lg ring-1 ring-slate-200 p-5">
@@ -266,7 +313,9 @@ export default function Attendance() {
                                 <AlertTriangle className="h-5 w-5 text-yellow-700" />
                             </div>
                             <div className="flex-1">
-                                <div className="text-base font-semibold text-slate-900">Web Attendance (Manual)</div>
+                                <div className="text-base font-semibold text-slate-900">
+                                    Web Attendance (Manual)
+                                </div>
 
                                 <div className="mt-1 text-sm text-slate-600">
                                     {!isMobileDevice() ? (
@@ -285,7 +334,9 @@ export default function Attendance() {
                         </div>
 
                         <div className="mt-4">
-                            <label className="text-xs font-semibold text-slate-700">Reason (required)</label>
+                            <label className="text-xs font-semibold text-slate-700">
+                                Reason (required)
+                            </label>
                             <textarea
                                 value={webReason}
                                 onChange={(e) => setWebReason(e.target.value)}
@@ -298,14 +349,14 @@ export default function Attendance() {
                         <div className="mt-5 flex gap-3">
                             <button
                                 className="flex-1 rounded-2xl bg-slate-900 text-white py-2.5 text-sm font-semibold hover:bg-slate-800 disabled:opacity-50"
-                                disabled={loading}
+                                disabled={actionBusy}
                                 onClick={submitWebFallback}
                             >
-                                {loading ? "Submitting..." : "Submit (Pending)"}
+                                {actionBusy ? "Submitting..." : "Submit (Pending)"}
                             </button>
                             <button
                                 className="flex-1 rounded-2xl bg-white text-slate-700 py-2.5 text-sm font-semibold ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
-                                disabled={loading}
+                                disabled={actionBusy}
                                 onClick={closeModal}
                             >
                                 Cancel

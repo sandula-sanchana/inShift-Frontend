@@ -1,92 +1,95 @@
-import React, { useMemo, useState } from "react";
-import { SectionTitle } from "../../../components/common/SectionTitle.jsx";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card.jsx";
-import { Button } from "../../../components/ui/Button.jsx";
-import { Badge } from "../../../components/ui/Badge.jsx";
-import { Fingerprint, MapPin, Smartphone, ShieldCheck, Loader2 } from "lucide-react";
-import { useToast } from "../../../components/ui/Toast.jsx";
+import React, { useState } from "react";
+import { Fingerprint, Loader2, CheckCircle2 } from "lucide-react";
+import * as webauthnJson from "@github/webauthn-json";
+import { api } from "../../../lib/api.js";
 
-function getReqId() {
-  const u = new URL(window.location.href);
-  return u.searchParams.get("reqId") || "";
+function getErrorMessage(err, fallback = "Passkey verification failed") {
+    const msgFromBackend =
+        err?.response?.data?.message ||
+        err?.response?.data?.msg ||
+        err?.response?.data?.data?.message;
+
+    if (msgFromBackend) return msgFromBackend;
+    return err?.message || fallback;
 }
 
 export default function Verify() {
-  const toast = useToast((s) => s.push);
-  const reqId = useMemo(() => getReqId(), []);
-  const [state, setState] = useState("idle");
+    const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState("");
 
-  async function onVerify() {
-    setState("prompt");
-    try {
-      await new Promise((r) => setTimeout(r, 800));
-      setState("success");
-      toast({ title: "Verified (UI)", message: "Hook WebAuthn + location calls later." });
-    } catch (e) {
-      setState("error");
-      toast({ title: "Failed", message: e.message || "Verification failed" });
+    async function verifyPasskey() {
+        try {
+            setLoading(true);
+            setStatus("");
+
+            // 1) get assertion options JSON string from backend
+            const res = await api.post("/v1/emp/passkey/assertion/options");
+            const optionsJson = res?.data?.data;
+
+            if (!optionsJson) {
+                throw new Error("No assertion options received from server");
+            }
+
+            // 2) parse backend JSON string into object
+            const requestOptions = JSON.parse(optionsJson);
+
+            // 3) ask browser/device to verify with passkey
+            const credential = await webauthnJson.get(requestOptions);
+
+            if (!credential) {
+                throw new Error("Passkey verification was cancelled or failed");
+            }
+
+            // 4) send full assertion JSON to backend
+            await api.post("/v1/emp/passkey/assertion/verify", {
+                credentialJson: JSON.stringify(credential),
+            });
+
+            setStatus("✅ Passkey verified successfully!");
+        } catch (err) {
+            console.error("Passkey assertion error:", err);
+            setStatus(`❌ ${getErrorMessage(err)}`);
+        } finally {
+            setLoading(false);
+        }
     }
-  }
 
-  return (
-    <div className="space-y-6">
-      <SectionTitle
-        title="Verify attendance"
-        subtitle="Notification → open → Verify → fingerprint prompt → send device + location."
-        right={<Badge variant={reqId ? "info" : "neutral"}>{reqId ? `reqId: ${reqId}` : "No request"}</Badge>}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Biometric verification</CardTitle>
-            <CardDescription>Uses passkeys/WebAuthn on supported devices. No fingerprint data stored.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { icon: Fingerprint, label: "Biometric" },
-                { icon: MapPin, label: "Location proof" },
-                { icon: Smartphone, label: "Device data" },
-              ].map((x) => (
-                <div key={x.label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center gap-2">
-                  <x.icon className="h-4 w-4 text-slate-700" />
-                  <div className="text-sm font-semibold text-slate-900">{x.label}</div>
-                </div>
-              ))}
+    return (
+        <div className="max-w-md mx-auto py-10 text-center">
+            <div className="flex justify-center mb-4">
+                <Fingerprint className="h-12 w-12 text-slate-700" />
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-sm text-slate-700">
-                When backend is connected, this button triggers the OS fingerprint UI via WebAuthn.
-              </div>
-            </div>
+            <h2 className="text-xl font-bold text-slate-900">
+                Verify Registered Passkey
+            </h2>
 
-            <Button onClick={onVerify} disabled={state === "prompt" || state === "success"}>
-              {state === "prompt" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              {state === "success" ? "Verified" : "Verify now"}
-            </Button>
-          </CardContent>
-        </Card>
+            <p className="text-sm text-slate-600 mt-2">
+                Test whether your registered passkey works on this device using fingerprint,
+                Face ID, or screen lock.
+            </p>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Manual fallback</CardTitle>
-            <CardDescription>Web manual check‑in with location, used only when policy allows.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button
-              variant="secondary"
-              onClick={() => toast({ title: "Manual check-in", message: "Hook to /attendance/manual-checkin later." })}
+            <button
+                onClick={verifyPasskey}
+                disabled={loading}
+                className="mt-6 w-full rounded-2xl bg-slate-900 text-white py-3 font-semibold hover:bg-slate-800 transition disabled:opacity-50"
             >
-              Manual check‑in
-            </Button>
-            <div className="text-xs text-slate-500">
-              In production, you can enforce geo rules + approvals for manual check-ins.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+                {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Verifying...
+                    </span>
+                ) : (
+                    "Verify Passkey"
+                )}
+            </button>
+
+            {status && (
+                <div className="mt-4 text-sm text-slate-700 flex items-center justify-center gap-2">
+                    {status.startsWith("✅") && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                    <span>{status}</span>
+                </div>
+            )}
+        </div>
+    );
 }

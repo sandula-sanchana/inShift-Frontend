@@ -1,33 +1,7 @@
 import React, { useState } from "react";
 import { Fingerprint, Loader2 } from "lucide-react";
+import * as webauthnJson from "@github/webauthn-json";
 import { api } from "../../lib/api.js";
-
-function base64UrlToBuffer(base64url) {
-    const base64 = base64url.replace(/-/g, "+").replace(/_/g, "/");
-    const binary = window.atob(base64);
-    const bytes = new Uint8Array(binary.length);
-
-    for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-    }
-
-    return bytes;
-}
-
-function bufferToBase64Url(buffer) {
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-
-    for (const b of bytes) {
-        binary += String.fromCharCode(b);
-    }
-
-    return window
-        .btoa(binary)
-        .replace(/\+/g, "-")
-        .replace(/\//g, "_")
-        .replace(/=/g, "");
-}
 
 function getErrorMessage(err, fallback = "Passkey registration failed") {
     const msgFromBackend = err?.response?.data?.message || err?.response?.data?.msg;
@@ -44,50 +18,27 @@ export default function Verify() {
             setLoading(true);
             setStatus("");
 
-            // 1) get register options from backend
+            // 1) get registration options JSON string from backend
             const res = await api.post("/v1/emp/passkey/register/options");
-            const options = res?.data?.data;
+            const optionsJson = res?.data?.data;
 
-            if (!options) {
+            if (!optionsJson) {
                 throw new Error("No registration options received from server");
             }
 
-            // 2) convert challenge + user.id to buffers for WebAuthn API
-            const publicKey = {
-                ...options,
-                challenge: base64UrlToBuffer(options.challenge),
-                user: {
-                    ...options.user,
-                    id: base64UrlToBuffer(options.user.id),
-                },
-                pubKeyCredParams: options.pubKeyCredParams,
-            };
+            // 2) parse backend JSON string into object
+            const creationOptions = JSON.parse(optionsJson);
 
-            // 3) trigger browser/device passkey creation
-            const credential = await navigator.credentials.create({ publicKey });
+            // 3) create passkey using webauthn-json helper
+            const credential = await webauthnJson.create(creationOptions);
 
             if (!credential) {
                 throw new Error("Credential creation failed");
             }
 
-            const response = credential.response;
-
-            // 4) extract real public key from authenticator response
-            if (typeof response.getPublicKey !== "function") {
-                throw new Error("This browser does not support public key extraction");
-            }
-
-            const extractedPublicKey = response.getPublicKey();
-
-            if (!extractedPublicKey) {
-                throw new Error("Failed to extract public key from authenticator");
-            }
-
-            // 5) send real public key to backend
+            // 4) send full encoded credential JSON to backend
             const payload = {
-                credentialId: credential.id,
-                publicKey: bufferToBase64Url(extractedPublicKey),
-                signCount: 0,
+                credentialJson: JSON.stringify(credential),
                 deviceName: navigator.userAgent,
             };
 
