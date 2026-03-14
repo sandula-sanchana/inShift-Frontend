@@ -13,9 +13,12 @@ import {
     User,
     CalendarClock,
     BadgeCheck,
+    Users,
+    FileSearch,
 } from "lucide-react";
 
 const BASE = "/v1/admin/attendance";
+const EMP_BASE = "/v1/admin/employees"; // change if your employee endpoint is different
 
 function unwrapApiResponse(resData) {
     if (resData && typeof resData === "object" && "data" in resData) return resData.data;
@@ -44,6 +47,11 @@ function Pill({ children, tone = "slate" }) {
             {children}
         </span>
     );
+}
+
+function formatDateTime(value) {
+    if (!value) return "--";
+    return new Date(value).toLocaleString();
 }
 
 function EmptyState({ onRefresh }) {
@@ -135,6 +143,87 @@ function RejectModal({ open, onClose, onConfirm, loading, record }) {
     );
 }
 
+function SummaryCard({ summary, loading, error }) {
+    if (loading) {
+        return (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="text-sm text-slate-500">Loading employee summary...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {error}
+            </div>
+        );
+    }
+
+    if (!summary) {
+        return (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="text-sm text-slate-500">Select an employee and date to view daily summary.</div>
+            </div>
+        );
+    }
+
+    const tone =
+        summary.dayStatus === "PRESENT" ? "green" :
+            summary.dayStatus === "PRESENT_LATE" ? "yellow" :
+                summary.dayStatus === "PRESENT_EARLY_LEAVE" ? "red" :
+                    summary.dayStatus === "PRESENT_OVERTIME" ? "indigo" :
+                        summary.dayStatus === "INCOMPLETE" ? "yellow" :
+                            "slate";
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <div className="text-lg font-bold text-slate-900">{summary.employeeName}</div>
+                    <div className="mt-1 text-sm text-slate-500">
+                        #{summary.employeeId} • {summary.branchName} • {summary.summaryDate}
+                    </div>
+                </div>
+                <Pill tone={tone}>{summary.dayStatus}</Pill>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">First In</div>
+                    <div className="mt-2 text-sm font-bold text-slate-900">{formatDateTime(summary.firstInTime)}</div>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last Out</div>
+                    <div className="mt-2 text-sm font-bold text-slate-900">{formatDateTime(summary.lastOutTime)}</div>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Presence</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        <Pill tone={summary.present ? "green" : "slate"}>
+                            {summary.present ? "Present" : "Absent"}
+                        </Pill>
+                        <Pill tone={summary.completed ? "indigo" : "yellow"}>
+                            {summary.completed ? "Completed" : "Incomplete"}
+                        </Pill>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Minutes</div>
+                    <div className="mt-2 space-y-1 text-sm text-slate-700">
+                        <div>Late: <b>{summary.lateMinutes ?? 0}</b></div>
+                        <div>Early leave: <b>{summary.earlyLeaveMinutes ?? 0}</b></div>
+                        <div>Overtime: <b>{summary.overtimeMinutes ?? 0}</b></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function AdminAttendancePage() {
     const [loading, setLoading] = useState(false);
     const [actingId, setActingId] = useState(null);
@@ -148,6 +237,13 @@ export default function AdminAttendancePage() {
 
     const [rejectOpen, setRejectOpen] = useState(false);
     const [rejectRecord, setRejectRecord] = useState(null);
+
+    const [employees, setEmployees] = useState([]);
+    const [employeeId, setEmployeeId] = useState("");
+    const [summaryDate, setSummaryDate] = useState(new Date().toISOString().slice(0, 10));
+    const [summary, setSummary] = useState(null);
+    const [summaryLoading, setSummaryLoading] = useState(false);
+    const [summaryError, setSummaryError] = useState(null);
 
     const fetchPending = async () => {
         setLoading(true);
@@ -163,8 +259,41 @@ export default function AdminAttendancePage() {
         }
     };
 
+    const fetchEmployees = async () => {
+        try {
+            const res = await api.get(EMP_BASE);
+            const list = unwrapApiResponse(res.data) || [];
+            setEmployees(list);
+        } catch (e) {
+            console.error("Failed to load employees", e);
+        }
+    };
+
+    const fetchSummary = async () => {
+        if (!employeeId || !summaryDate) {
+            setSummaryError("Please select employee and date.");
+            return;
+        }
+
+        setSummaryLoading(true);
+        setSummaryError(null);
+
+        try {
+            const res = await api.get(`${BASE}/summary/employee/${employeeId}`, {
+                params: { date: summaryDate },
+            });
+            setSummary(unwrapApiResponse(res.data));
+        } catch (e) {
+            setSummary(null);
+            setSummaryError(getErrorMessage(e, "Failed to load attendance summary"));
+        } finally {
+            setSummaryLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchPending();
+        fetchEmployees();
     }, []);
 
     const filtered = useMemo(() => {
@@ -188,6 +317,9 @@ export default function AdminAttendancePage() {
             await api.post(`${BASE}/${id}/approve`);
             setRows((prev) => prev.filter((x) => x.id !== id));
             setInfo("Attendance approved.");
+            if (employeeId) {
+                fetchSummary();
+            }
         } catch (e) {
             setError(getErrorMessage(e, "Approve failed"));
         } finally {
@@ -214,6 +346,9 @@ export default function AdminAttendancePage() {
             setInfo("Attendance rejected.");
             setRejectOpen(false);
             setRejectRecord(null);
+            if (employeeId) {
+                fetchSummary();
+            }
         } catch (e) {
             setError(getErrorMessage(e, "Reject failed"));
         } finally {
@@ -227,7 +362,7 @@ export default function AdminAttendancePage() {
                 <div>
                     <div className="text-2xl font-bold tracking-tight text-slate-900">Attendance Approvals</div>
                     <div className="mt-1.5 text-sm text-slate-500">
-                        Review Web attendance punches. Approve valid requests or reject with a note.
+                        Review Web attendance punches and inspect employee daily summaries.
                     </div>
                 </div>
 
@@ -266,6 +401,58 @@ export default function AdminAttendancePage() {
                 </div>
             )}
 
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <FileSearch className="h-4 w-4" />
+                    Employee Daily Summary Lookup
+                </div>
+
+                <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_180px_auto]">
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Employee</label>
+                        <div className="mt-1 relative">
+                            <Users className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                            <select
+                                value={employeeId}
+                                onChange={(e) => setEmployeeId(e.target.value)}
+                                className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200"
+                            >
+                                <option value="">Select employee</option>
+                                {employees.map((emp) => (
+                                    <option key={emp.employeeId} value={emp.employeeId}>
+                                        {emp.fullName} #{emp.employeeId}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Date</label>
+                        <input
+                            type="date"
+                            value={summaryDate}
+                            onChange={(e) => setSummaryDate(e.target.value)}
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200"
+                        />
+                    </div>
+
+                    <div className="flex items-end">
+                        <button
+                            onClick={fetchSummary}
+                            disabled={summaryLoading}
+                            className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 active:scale-[0.98]"
+                        >
+                            {summaryLoading ? "Loading..." : "View Summary"}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-5">
+                    <SummaryCard summary={summary} loading={summaryLoading} error={summaryError} />
+                </div>
+            </div>
+
             <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex-1">
@@ -303,7 +490,6 @@ export default function AdminAttendancePage() {
                             >
                                 <option value="ALL">All Sources</option>
                                 <option value="WEB">WEB</option>
-                                <option value="MOBILE">MOBILE</option>
                             </select>
                         </div>
                     </div>
@@ -372,12 +558,6 @@ export default function AdminAttendancePage() {
                                             {r.reason && (
                                                 <div className="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 ring-1 ring-slate-200">
                                                     <span className="font-semibold">Employee reason:</span> {r.reason}
-                                                </div>
-                                            )}
-
-                                            {r.decisionNote && (
-                                                <div className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
-                                                    <span className="font-semibold">Decision note:</span> {r.decisionNote}
                                                 </div>
                                             )}
 
