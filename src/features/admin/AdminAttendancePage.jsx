@@ -12,6 +12,7 @@ import {
     MessageSquare,
     User,
     CalendarClock,
+    BadgeCheck,
 } from "lucide-react";
 
 const BASE = "/v1/admin/attendance";
@@ -40,8 +41,8 @@ function Pill({ children, tone = "slate" }) {
     };
     return (
         <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${tones[tone]}`}>
-      {children}
-    </span>
+            {children}
+        </span>
     );
 }
 
@@ -53,7 +54,7 @@ function EmptyState({ onRefresh }) {
             </div>
             <div className="mt-4 text-lg font-bold text-slate-900">No pending attendance</div>
             <div className="mt-1 text-sm text-slate-500">
-                You're all caught up. New Web (PC) punches will appear here for approval.
+                You're all caught up. New Web punches will appear here for approval.
             </div>
             <button
                 onClick={onRefresh}
@@ -128,10 +129,6 @@ function RejectModal({ open, onClose, onConfirm, loading, record }) {
                             Cancel
                         </button>
                     </div>
-
-                    <div className="mt-3 text-xs text-slate-500">
-                        Tip: keep it short and factual. This becomes the <b>decisionNote</b>.
-                    </div>
                 </div>
             </div>
         </div>
@@ -143,15 +140,12 @@ export default function AdminAttendancePage() {
     const [actingId, setActingId] = useState(null);
     const [error, setError] = useState(null);
     const [info, setInfo] = useState(null);
-
     const [rows, setRows] = useState([]);
 
-    // filters
     const [q, setQ] = useState("");
-    const [typeFilter, setTypeFilter] = useState("ALL"); // ALL/IN/OUT
-    const [sourceFilter, setSourceFilter] = useState("ALL"); // ALL/WEB/MOBILE
+    const [typeFilter, setTypeFilter] = useState("ALL");
+    const [sourceFilter, setSourceFilter] = useState("ALL");
 
-    // reject modal
     const [rejectOpen, setRejectOpen] = useState(false);
     const [rejectRecord, setRejectRecord] = useState(null);
 
@@ -171,7 +165,6 @@ export default function AdminAttendancePage() {
 
     useEffect(() => {
         fetchPending();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const filtered = useMemo(() => {
@@ -181,7 +174,7 @@ export default function AdminAttendancePage() {
             .filter((r) => (sourceFilter === "ALL" ? true : r.source === sourceFilter))
             .filter((r) => {
                 if (!query) return true;
-                const hay = `${r.employeeName || ""} ${r.employeeId || ""} ${r.branchName || ""} ${r.type || ""} ${r.source || ""}`
+                const hay = `${r.employeeName || ""} ${r.employeeId || ""} ${r.branchName || ""} ${r.type || ""} ${r.source || ""} ${r.attendanceMark || ""}`
                     .toLowerCase();
                 return hay.includes(query);
             });
@@ -194,7 +187,7 @@ export default function AdminAttendancePage() {
         try {
             await api.post(`${BASE}/${id}/approve`);
             setRows((prev) => prev.filter((x) => x.id !== id));
-            setInfo("Attendance approved ✅");
+            setInfo("Attendance approved.");
         } catch (e) {
             setError(getErrorMessage(e, "Approve failed"));
         } finally {
@@ -218,7 +211,7 @@ export default function AdminAttendancePage() {
         try {
             await api.post(`${BASE}/${id}/reject`, { note: note.trim() });
             setRows((prev) => prev.filter((x) => x.id !== id));
-            setInfo("Attendance rejected ❌");
+            setInfo("Attendance rejected.");
             setRejectOpen(false);
             setRejectRecord(null);
         } catch (e) {
@@ -228,23 +221,20 @@ export default function AdminAttendancePage() {
         }
     };
 
-    const headerCount = filtered.length;
-
     return (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            {/* Header */}
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <div className="text-2xl font-bold tracking-tight text-slate-900">Attendance Approvals</div>
                     <div className="mt-1.5 text-sm text-slate-500">
-                        Review Web (PC) attendance punches. Approve valid requests or reject with a note.
+                        Review Web attendance punches. Approve valid requests or reject with a note.
                     </div>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                     <Pill tone="yellow">
                         <Clock className="mr-1.5 h-3.5 w-3.5" />
-                        Pending: {headerCount}
+                        Pending: {filtered.length}
                     </Pill>
 
                     <button
@@ -258,7 +248,6 @@ export default function AdminAttendancePage() {
                 </div>
             </div>
 
-            {/* Alerts */}
             {error && (
                 <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                     <div className="flex items-start gap-2">
@@ -267,6 +256,7 @@ export default function AdminAttendancePage() {
                     </div>
                 </div>
             )}
+
             {info && (
                 <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
                     <div className="flex items-start gap-2">
@@ -276,7 +266,6 @@ export default function AdminAttendancePage() {
                 </div>
             )}
 
-            {/* Filters */}
             <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex-1">
@@ -285,7 +274,7 @@ export default function AdminAttendancePage() {
                             <input
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
-                                placeholder="Search employee / branch / id..."
+                                placeholder="Search employee / branch / mark..."
                                 className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-200"
                             />
                         </div>
@@ -321,7 +310,6 @@ export default function AdminAttendancePage() {
                 </div>
             </div>
 
-            {/* List */}
             <div className="mt-6">
                 {loading && rows.length === 0 ? (
                     <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-600">
@@ -342,7 +330,6 @@ export default function AdminAttendancePage() {
                                     className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
                                 >
                                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                                        {/* Left */}
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <div className="inline-flex items-center gap-2 text-sm font-bold text-slate-900">
@@ -354,20 +341,26 @@ export default function AdminAttendancePage() {
                                                 <Pill tone="yellow">PENDING</Pill>
                                                 <Pill tone={r.source === "WEB" ? "indigo" : "purple"}>{r.source}</Pill>
                                                 <Pill tone={r.type === "IN" ? "green" : "red"}>{r.type}</Pill>
+                                                {r.attendanceMark && (
+                                                    <Pill tone="slate">
+                                                        <BadgeCheck className="mr-1 h-3.5 w-3.5" />
+                                                        {r.attendanceMark}
+                                                    </Pill>
+                                                )}
                                             </div>
 
                                             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                        <span className="inline-flex items-center gap-2">
-                          <CalendarClock className="h-4 w-4 text-slate-400" />
-                            {timeStr}
-                        </span>
+                                                <span className="inline-flex items-center gap-2">
+                                                    <CalendarClock className="h-4 w-4 text-slate-400" />
+                                                    {timeStr}
+                                                </span>
 
                                                 <span className="h-1 w-1 rounded-full bg-slate-300" />
 
                                                 <span className="inline-flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-slate-400" />
+                                                    <MapPin className="h-4 w-4 text-slate-400" />
                                                     {r.branchName}
-                        </span>
+                                                </span>
                                             </div>
 
                                             {r.locationText && (
@@ -379,6 +372,12 @@ export default function AdminAttendancePage() {
                                             {r.reason && (
                                                 <div className="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 ring-1 ring-slate-200">
                                                     <span className="font-semibold">Employee reason:</span> {r.reason}
+                                                </div>
+                                            )}
+
+                                            {r.decisionNote && (
+                                                <div className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700 ring-1 ring-red-200">
+                                                    <span className="font-semibold">Decision note:</span> {r.decisionNote}
                                                 </div>
                                             )}
 
@@ -395,7 +394,6 @@ export default function AdminAttendancePage() {
                                             )}
                                         </div>
 
-                                        {/* Actions */}
                                         <div className="flex flex-col sm:flex-row gap-3 lg:justify-end">
                                             <button
                                                 onClick={() => approve(r.id)}
@@ -423,7 +421,6 @@ export default function AdminAttendancePage() {
                 )}
             </div>
 
-            {/* Reject modal */}
             <RejectModal
                 open={rejectOpen}
                 record={rejectRecord}
