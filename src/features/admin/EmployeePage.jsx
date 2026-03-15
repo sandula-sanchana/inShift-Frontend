@@ -44,22 +44,26 @@ function SlideOver({ open, title, subtitle, children, onClose }) {
 
     return createPortal(
         <div className="fixed inset-0 z-[9999]">
-            <div onClick={onClose} className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]" />
-            <div className="absolute right-0 top-0 h-full w-full sm:w-[560px] bg-white shadow-2xl">
-                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600">
+            <div onClick={onClose} className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" />
+            <div className="absolute right-0 top-0 h-full w-full sm:w-[560px] border-l border-white/10 bg-[#020617] shadow-2xl">
+                <div className="border-b border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl">
                     <div className="flex items-start justify-between gap-3">
                         <div>
                             <div className="text-base font-semibold text-white">{title}</div>
-                            {subtitle && <div className="text-xs text-white/80 mt-0.5">{subtitle}</div>}
+                            {subtitle && <div className="mt-0.5 text-xs text-slate-400">{subtitle}</div>}
                         </div>
 
-                        <button onClick={onClose} className="rounded-xl p-2 text-white/90 hover:bg-white/10" aria-label="Close">
+                        <button
+                            onClick={onClose}
+                            className="rounded-xl border border-white/10 bg-white/[0.03] p-2 text-slate-300 transition hover:bg-white/[0.06]"
+                            aria-label="Close"
+                        >
                             <X className="h-5 w-5" />
                         </button>
                     </div>
                 </div>
 
-                <div className="p-5 sm:p-6 overflow-y-auto h-[calc(100%-64px)]">{children}</div>
+                <div className="h-[calc(100%-73px)] overflow-y-auto p-5 sm:p-6">{children}</div>
             </div>
         </div>,
         document.body
@@ -69,19 +73,19 @@ function SlideOver({ open, title, subtitle, children, onClose }) {
 function Field({ label, value, onChange, placeholder, error, type = "text" }) {
     return (
         <div>
-            <div className="mb-1 text-xs font-semibold text-slate-600">{label}</div>
+            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>
             <input
                 type={type}
                 value={value ?? ""}
                 onChange={(e) => onChange?.(e.target.value)}
                 placeholder={placeholder}
                 className={cn(
-                    "w-full rounded-2xl border bg-white px-3 py-2.5 text-sm outline-none",
-                    "focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300",
-                    error ? "border-rose-300 ring-2 ring-rose-100" : "border-slate-200"
+                    "w-full rounded-2xl border bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500",
+                    "focus:border-indigo-500/30 focus:bg-white/[0.06]",
+                    error ? "border-rose-500/30 ring-2 ring-rose-500/10" : "border-white/10"
                 )}
             />
-            {error && <div className="mt-1 text-xs text-rose-600">{error}</div>}
+            {error && <div className="mt-2 text-xs text-rose-400">{error}</div>}
         </div>
     );
 }
@@ -89,23 +93,23 @@ function Field({ label, value, onChange, placeholder, error, type = "text" }) {
 function Select({ label, value, onChange, options, error }) {
     return (
         <div>
-            <div className="mb-1 text-xs font-semibold text-slate-600">{label}</div>
+            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>
             <select
                 value={value ?? ""}
                 onChange={(e) => onChange?.(e.target.value)}
                 className={cn(
-                    "w-full rounded-2xl border bg-white px-3 py-2.5 text-sm outline-none",
-                    "focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300",
-                    error ? "border-rose-300 ring-2 ring-rose-100" : "border-slate-200"
+                    "w-full rounded-2xl border bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition",
+                    "focus:border-indigo-500/30 focus:bg-white/[0.06]",
+                    error ? "border-rose-500/30 ring-2 ring-rose-500/10" : "border-white/10"
                 )}
             >
                 {options.map((o) => (
-                    <option key={o.value} value={o.value}>
+                    <option key={o.value} value={o.value} className="bg-slate-900 text-white">
                         {o.label}
                     </option>
                 ))}
             </select>
-            {error && <div className="mt-1 text-xs text-rose-600">{error}</div>}
+            {error && <div className="mt-2 text-xs text-rose-400">{error}</div>}
         </div>
     );
 }
@@ -114,13 +118,15 @@ function Badge({ active }) {
     return (
         <span
             className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
-                active ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-1 ring-slate-200"
+                "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold ring-1",
+                active
+                    ? "bg-emerald-500/10 text-emerald-300 ring-emerald-500/20"
+                    : "bg-slate-500/10 text-slate-300 ring-slate-500/20"
             )}
         >
-      <span className={cn("h-2 w-2 rounded-full", active ? "bg-emerald-500" : "bg-slate-400")} />
+            <span className={cn("h-2 w-2 rounded-full", active ? "bg-emerald-400" : "bg-slate-400")} />
             {active ? "Active" : "Inactive"}
-    </span>
+        </span>
     );
 }
 
@@ -310,92 +316,101 @@ export default function EmployeesPage() {
     }
 
     return (
-        <div className="space-y-5">
-            <div className="rounded-3xl p-5 sm:p-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 text-white shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/20">
-                            <Users className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                            <div className="text-lg font-bold">Employees</div>
-                            <div className="text-xs text-white/80">Search, add, edit and manage employees</div>
-                        </div>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-8 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                        <h1 className="text-3xl font-black tracking-tight text-white lg:text-4xl">
+                            Employees
+                        </h1>
                     </div>
-
-                    <button
-                        onClick={openCreate}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/20 hover:bg-white/20"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Employee
-                    </button>
+                    <p className="mt-2 text-sm text-slate-400">
+                        Search, add, edit, and manage employee accounts across your branches.
+                    </p>
                 </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="relative flex-1 min-w-[220px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <button
+                    onClick={openCreate}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                >
+                    <Plus className="h-4 w-4" />
+                    Add Employee
+                </button>
+            </header>
+
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+                <div className="relative min-w-[220px] flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                     <input
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
                         placeholder="Search by code, name, email, phone, branch..."
-                        className="w-full rounded-2xl border border-slate-200 bg-white pl-9 pr-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300"
+                        className="w-full rounded-2xl border border-white/10 bg-white/[0.03] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-500/30 focus:bg-white/[0.06]"
                     />
                 </div>
 
                 <button
                     onClick={loadAll}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.06]"
                 >
                     <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
                     Refresh
                 </button>
-
-                {status && <div className="text-sm text-slate-600">{status}</div>}
             </div>
 
-            <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden">
-                <div className="hidden lg:block">
+            {status && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300 backdrop-blur-xl">
+                    {status}
+                </div>
+            )}
+
+            <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-xl backdrop-blur-2xl">
+                <div className="hidden lg:block overflow-x-auto">
                     <table className="w-full text-sm">
-                        <thead className="bg-gradient-to-r from-indigo-50 via-purple-50 to-cyan-50 text-slate-700">
-                        <tr>
-                            <th className="text-left font-semibold px-4 py-3">Code</th>
-                            <th className="text-left font-semibold px-4 py-3">Name</th>
-                            <th className="text-left font-semibold px-4 py-3">Email</th>
-                            <th className="text-left font-semibold px-4 py-3">Phone</th>
-                            <th className="text-left font-semibold px-4 py-3">Branch</th>
-                            <th className="text-left font-semibold px-4 py-3">Status</th>
-                            <th className="px-4 py-3" />
+                        <thead className="bg-white/[0.03] text-slate-300">
+                        <tr className="border-b border-white/10">
+                            <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Code</th>
+                            <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Name</th>
+                            <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Email</th>
+                            <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Phone</th>
+                            <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Branch</th>
+                            <th className="px-4 py-4 text-left text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">Status</th>
+                            <th className="px-4 py-4" />
                         </tr>
                         </thead>
 
                         <tbody>
                         {filtered.map((e) => (
-                            <tr key={e.employeeId ?? e.id} className="border-t hover:bg-slate-50/60">
-                                <td className="px-4 py-3 font-mono text-slate-700">{e.empCode}</td>
-                                <td className="px-4 py-3 font-semibold text-slate-900">{e.fullName}</td>
-                                <td className="px-4 py-3 text-slate-700">{e.email ?? "—"}</td>
-                                <td className="px-4 py-3 text-slate-700">{e.phone ?? "—"}</td>
-                                <td className="px-4 py-3 text-slate-700">{e.branchName ?? e.branch?.branchName ?? e.branchCode ?? "—"}</td>
-                                <td className="px-4 py-3">
+                            <tr
+                                key={e.employeeId ?? e.id}
+                                className="border-t border-white/5 transition hover:bg-white/[0.03]"
+                            >
+                                <td className="px-4 py-4 font-mono text-slate-300">{e.empCode}</td>
+                                <td className="px-4 py-4 font-semibold text-white">{e.fullName}</td>
+                                <td className="px-4 py-4 text-slate-300">{e.email ?? "—"}</td>
+                                <td className="px-4 py-4 text-slate-300">{e.phone ?? "—"}</td>
+                                <td className="px-4 py-4 text-slate-300">
+                                    {e.branchName ?? e.branch?.branchName ?? e.branchCode ?? "—"}
+                                </td>
+                                <td className="px-4 py-4">
                                     <Badge active={!!e.active} />
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-4 py-4">
                                     <div className="flex justify-end gap-2">
                                         <button
                                             onClick={() => openEdit(e)}
-                                            className="rounded-xl border border-slate-200 bg-white p-2 hover:bg-indigo-50"
+                                            className="rounded-xl border border-white/10 bg-white/[0.03] p-2 transition hover:bg-indigo-500/10"
                                             title="Edit"
                                         >
-                                            <Pencil className="h-4 w-4 text-indigo-700" />
+                                            <Pencil className="h-4 w-4 text-indigo-300" />
                                         </button>
                                         <button
                                             onClick={() => remove(e)}
-                                            className="rounded-xl border border-slate-200 bg-white p-2 hover:bg-rose-50"
+                                            className="rounded-xl border border-white/10 bg-white/[0.03] p-2 transition hover:bg-rose-500/10"
                                             title="Delete"
                                         >
-                                            <Trash2 className="h-4 w-4 text-rose-600" />
+                                            <Trash2 className="h-4 w-4 text-rose-300" />
                                         </button>
                                     </div>
                                 </td>
@@ -404,7 +419,7 @@ export default function EmployeesPage() {
 
                         {!loading && filtered.length === 0 && (
                             <tr>
-                                <td className="px-4 py-10 text-center text-slate-500" colSpan={7}>
+                                <td className="px-4 py-12 text-center text-slate-500" colSpan={7}>
                                     No employees found.
                                 </td>
                             </tr>
@@ -413,21 +428,21 @@ export default function EmployeesPage() {
                     </table>
                 </div>
 
-                <div className="lg:hidden p-3 sm:p-4 space-y-3">
+                <div className="space-y-3 p-4 lg:hidden">
                     {filtered.map((e) => (
                         <div
                             key={e.employeeId ?? e.id}
-                            className="rounded-3xl border border-slate-200 p-4 bg-gradient-to-b from-white to-indigo-50/30"
+                            className="rounded-3xl border border-white/10 bg-white/[0.03] p-4"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <div className="text-sm font-semibold text-slate-900">{e.fullName}</div>
-                                    <div className="mt-1 text-xs text-slate-600 font-mono">{e.empCode}</div>
+                                    <div className="text-sm font-semibold text-white">{e.fullName}</div>
+                                    <div className="mt-1 font-mono text-xs text-slate-500">{e.empCode}</div>
                                 </div>
                                 <Badge active={!!e.active} />
                             </div>
 
-                            <div className="mt-3 grid gap-1 text-sm text-slate-700">
+                            <div className="mt-3 grid gap-1 text-sm text-slate-300">
                                 <div>
                                     <span className="text-slate-500">Email:</span> {e.email ?? "—"}
                                 </div>
@@ -439,16 +454,16 @@ export default function EmployeesPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-3 flex gap-2">
+                            <div className="mt-4 flex gap-2">
                                 <button
                                     onClick={() => openEdit(e)}
-                                    className="flex-1 rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                                    className="flex-1 rounded-2xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
                                 >
                                     Edit
                                 </button>
                                 <button
                                     onClick={() => remove(e)}
-                                    className="flex-1 rounded-2xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                                    className="flex-1 rounded-2xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-rose-500"
                                 >
                                     Delete
                                 </button>
@@ -468,8 +483,8 @@ export default function EmployeesPage() {
                 subtitle={mode === "edit" ? "Update employee details" : "Create a new employee"}
                 onClose={() => setOpen(false)}
             >
-                <div className="space-y-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-5">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <Field
                             label="Employee Code"
                             placeholder="EMP-001"
@@ -486,7 +501,7 @@ export default function EmployeesPage() {
                         />
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <Field
                             label="Email"
                             placeholder="name@example.com"
@@ -504,7 +519,7 @@ export default function EmployeesPage() {
                         />
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-4 sm:grid-cols-2">
                         <Select
                             label="Role"
                             value={form.role}
@@ -525,23 +540,27 @@ export default function EmployeesPage() {
                         />
                     </div>
 
-                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-300">
                         <input
                             type="checkbox"
                             checked={!!form.active}
                             onChange={(e) => setField("active", e.target.checked)}
-                            className="h-4 w-4"
+                            className="h-4 w-4 rounded border-white/20 bg-slate-900"
                         />
                         Active
                     </label>
 
-                    {status && <div className="text-sm text-slate-600">{status}</div>}
+                    {status && (
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+                            {status}
+                        </div>
+                    )}
 
-                    <div className="flex gap-2 pt-2">
+                    <div className="flex gap-3 pt-2">
                         <button
                             type="button"
                             onClick={() => setOpen(false)}
-                            className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                            className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.06]"
                         >
                             Cancel
                         </button>
@@ -549,7 +568,7 @@ export default function EmployeesPage() {
                             type="button"
                             disabled={saving}
                             onClick={save}
-                            className="flex-1 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-60"
+                            className="flex-1 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
                         >
                             {saving ? "Saving..." : mode === "edit" ? "Update" : "Save"}
                         </button>

@@ -306,19 +306,47 @@ export default function BranchesPage() {
     }
 
     return (
-        <div className="space-y-5">
-            <div>
-                <div className="text-lg font-bold text-slate-900">Branches</div>
-                <div className="text-sm text-slate-600">
-                    Add a branch and pick its exact location on the map. Set an allowed radius for check-ins.
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-8 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                        <h1 className="text-3xl font-black tracking-tight text-white lg:text-4xl">
+                            Branches
+                        </h1>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-400">
+                        Add a branch, choose its exact location on the map, and define the allowed radius for attendance check-ins.
+                    </p>
                 </div>
-            </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl">
+                    <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+                        Branch Setup
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-white">
+                        Location + Geo Radius
+                    </div>
+                </div>
+            </header>
+
+            {status && (
+                <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300 backdrop-blur-xl">
+                    {status}
+                </div>
+            )}
+
+            <div className="mt-10 grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
                 {/* Left */}
-                <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
-                    <div className="grid gap-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 backdrop-blur-2xl shadow-xl">
+                    <div className="mb-6">
+                        <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                            Branch Information
+                        </h2>
+                    </div>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <Field
                                 label="Branch Code"
                                 placeholder="e.g., COL-01"
@@ -343,13 +371,13 @@ export default function BranchesPage() {
                                 onChange={(v) => setAddressQuery(v)}
                             />
                             {suggestions.length > 0 && (
-                                <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
+                                <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a] shadow-2xl backdrop-blur-2xl">
                                     {suggestions.map((s) => (
                                         <button
                                             key={`${s.place_id}-${s.osm_id}`}
                                             type="button"
                                             onClick={() => selectSuggestion(s)}
-                                            className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                                            className="w-full border-b border-white/5 px-4 py-3 text-left text-sm text-slate-300 transition hover:bg-white/[0.04] last:border-b-0"
                                         >
                                             {s.display_name}
                                         </button>
@@ -358,7 +386,7 @@ export default function BranchesPage() {
                             )}
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <Field
                                 label="Address Line 1"
                                 placeholder="Road / building"
@@ -374,13 +402,13 @@ export default function BranchesPage() {
                             />
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="grid gap-4 sm:grid-cols-3">
                             <Field label="City" value={form.city} onChange={(v) => setField("city", v)} error={errors.city} />
                             <Field label="District" value={form.district} onChange={(v) => setField("district", v)} error={errors.district} />
                             <Field label="Province" value={form.province} onChange={(v) => setField("province", v)} error={errors.province} />
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <Field
                                 label="Allowed Radius (meters)"
                                 placeholder="e.g., 200"
@@ -395,26 +423,31 @@ export default function BranchesPage() {
                             />
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <Field label="Email" value={form.email} onChange={(v) => setField("email", v)} error={errors.email} />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <Field
+                                label="Email"
+                                value={form.email}
+                                onChange={(v) => setField("email", v)}
+                                error={errors.email}
+                            />
                             <div />
                         </div>
 
-                        <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-semibold text-slate-300">
                             <input
                                 type="checkbox"
                                 checked={!!form.active}
                                 onChange={(e) => setField("active", e.target.checked)}
-                                className="h-4 w-4"
+                                className="h-4 w-4 rounded border-white/20 bg-slate-900"
                             />
-                            Active
+                            Active Branch
                         </label>
 
-                        <div className="flex flex-wrap items-center gap-2 pt-2">
+                        <div className="flex flex-wrap items-center gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={useMyLocation}
-                                className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/[0.06]"
                             >
                                 📍 Use My Location
                             </button>
@@ -423,49 +456,66 @@ export default function BranchesPage() {
                                 type="button"
                                 disabled={saving}
                                 onClick={saveBranch}
-                                className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                className="rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:opacity-60"
                             >
                                 {saving ? "Saving..." : "Save Branch"}
                             </button>
-
-                            {status && <div className="text-sm text-slate-600">{status}</div>}
                         </div>
 
                         {(errors.latitude || errors.longitude) && (
-                            <div className="text-sm text-rose-600">❌ {errors.latitude || errors.longitude}</div>
+                            <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-400">
+                                ❌ {errors.latitude || errors.longitude}
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Right */}
-                <div className="rounded-3xl border border-slate-200 bg-white p-3">
-                    <div className="mb-2 flex items-center justify-between px-1">
-                        <div className="text-sm font-semibold text-slate-800">Pick Branch Location</div>
-                        <div className="text-xs text-slate-500">Click map to adjust marker</div>
+                <div className="space-y-6">
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-2xl shadow-xl">
+                        <div className="mb-3 flex items-center justify-between px-1">
+                            <div>
+                                <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                                    Map Location
+                                </div>
+                                <div className="mt-1 text-sm font-semibold text-white">
+                                    Pick Branch Coordinates
+                                </div>
+                            </div>
+                            <div className="text-xs text-slate-500">Click map to adjust marker</div>
+                        </div>
+
+                        <div className="overflow-hidden rounded-2xl border border-white/10">
+                            <MapContainer center={mapCenter} zoom={13} style={{ height: 420, width: "100%" }}>
+                                <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                                <PanTo lat={form.latitude} lng={form.longitude} />
+                                <ClickToPick onPick={onPick} />
+
+                                {form.latitude != null && form.longitude != null && (
+                                    <>
+                                        <Marker position={[form.latitude, form.longitude]} icon={markerIcon} />
+                                        <Circle center={[form.latitude, form.longitude]} radius={Number(form.radiusMeters) || 0} />
+                                    </>
+                                )}
+                            </MapContainer>
+                        </div>
                     </div>
 
-                    <div className="overflow-hidden rounded-2xl">
-                        <MapContainer center={mapCenter} zoom={13} style={{ height: 420, width: "100%" }}>
-                            <TileLayer attribution="© OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                            <PanTo lat={form.latitude} lng={form.longitude} />
-                            <ClickToPick onPick={onPick} />
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl shadow-xl">
+                        <div className="mb-4">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+                                Geo Summary
+                            </div>
+                        </div>
 
-                            {form.latitude != null && form.longitude != null && (
-                                <>
-                                    <Marker position={[form.latitude, form.longitude]} icon={markerIcon} />
-                                    <Circle center={[form.latitude, form.longitude]} radius={Number(form.radiusMeters) || 0} />
-                                </>
-                            )}
-                        </MapContainer>
-                    </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <MiniField label="Latitude" value={form.latitude ?? ""} />
+                            <MiniField label="Longitude" value={form.longitude ?? ""} />
+                        </div>
 
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                        <MiniField label="Latitude" value={form.latitude ?? ""} />
-                        <MiniField label="Longitude" value={form.longitude ?? ""} />
-                    </div>
-
-                    <div className="mt-2">
-                        <MiniField label="Radius (m)" value={form.radiusMeters ?? ""} />
+                        <div className="mt-3">
+                            <MiniField label="Radius (m)" value={form.radiusMeters ?? ""} />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -476,26 +526,30 @@ export default function BranchesPage() {
 function Field({ label, value, onChange, placeholder, error }) {
     return (
         <div>
-            <div className="mb-1 text-xs font-semibold text-slate-600">{label}</div>
+            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+                {label}
+            </div>
             <input
                 value={value ?? ""}
                 onChange={(e) => onChange?.(e.target.value)}
                 placeholder={placeholder}
                 className={
-                    "w-full rounded-2xl border bg-white px-3 py-2.5 text-sm outline-none " +
-                    (error ? "border-rose-300 ring-2 ring-rose-100" : "border-slate-200 focus:ring-2 focus:ring-slate-200")
+                    "w-full rounded-2xl border bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 " +
+                    (error
+                        ? "border-rose-500/30 ring-2 ring-rose-500/10"
+                        : "border-white/10 focus:border-indigo-500/30 focus:bg-white/[0.06]")
                 }
             />
-            {error && <div className="mt-1 text-xs text-rose-600">{error}</div>}
+            {error && <div className="mt-2 text-xs text-rose-400">{error}</div>}
         </div>
     );
 }
 
 function MiniField({ label, value }) {
     return (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <div className="text-[11px] font-semibold text-slate-600">{label}</div>
-            <div className="text-sm font-mono text-slate-800 truncate">{String(value)}</div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>
+            <div className="mt-1 truncate font-mono text-sm text-slate-200">{String(value)}</div>
         </div>
     );
 }
