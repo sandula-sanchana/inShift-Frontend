@@ -8,18 +8,20 @@ import {
     CalendarDays,
     Clock3,
     ShieldCheck,
-    LogOut
+    LogOut,
+    ClipboardList
 } from "lucide-react";
 import { cn } from "../../lib/cn";
 import { authStore } from "../../features/auth/store";
 import { LogoMark } from "../../components/common/Logo";
 
-// Your existing pages
+
 import Notifications from "../../features/employee/notification/Notifications.jsx";
 import Attendance from "../../features/employee/Attendance/Attendance.jsx";
 import Verify from "../../features/employee/verification/Verify.jsx";
 import Shifts from "../../features/employee/shifts/Shifts.jsx";
 import Security from "../../features/employee/security.jsx";
+import Corrections from "../../features/employee/AttendanceCorrections.jsx";
 
 function NavItem({ to, icon: Icon, label }) {
     return (
@@ -84,6 +86,7 @@ export default function EmployeeDashboard() {
             { to: "/emp", icon: LayoutDashboard, label: "Overview" },
             { to: "/emp/notifications", icon: Bell, label: "Notifications" },
             { to: "/emp/attendance", icon: BadgeCheck, label: "Attendance" },
+            { to: "/emp/corrections", icon: ClipboardList, label: "Corrections" },
             { to: "/emp/verify", icon: Fingerprint, label: "Verify" },
             { to: "/emp/shifts", icon: CalendarDays, label: "My Shifts" },
             { to: "/emp/ot", icon: Clock3, label: "My OT" },
@@ -151,6 +154,7 @@ export default function EmployeeDashboard() {
                             <Route index element={<EmpOverview />} />
                             <Route path="notifications" element={<Notifications />} />
                             <Route path="attendance" element={<Attendance />} />
+                            <Route path="corrections" element={<Corrections />} />
                             <Route path="verify" element={<Verify />} />
                             <Route path="shifts" element={<Shifts />} />
                             <Route path="ot" element={<div className="text-slate-900 font-semibold">My OT Page</div>} />

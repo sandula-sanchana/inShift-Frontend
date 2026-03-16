@@ -276,13 +276,15 @@ export default function Attendance() {
 
             await fetchTodaySummary();
         } catch (e) {
-            const geoMsg =
-                e?.code != null ? geoErrorMessage(e) : getErrorMessage(e, "Attendance verification failed");
-            setError(geoMsg);
+            const isGeoError = e?.code === 1 || e?.code === 2 || e?.code === 3;
 
-            if (e?.code === 1 || e?.code === 2 || e?.code === 3) {
-                setShowHelp(true);
-            }
+            setError(
+                isGeoError
+                    ? geoErrorMessage(e)
+                    : getErrorMessage(e, "Attendance verification failed")
+            );
+
+            setShowHelp(isGeoError);
         } finally {
             setLoading(false);
         }

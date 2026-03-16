@@ -26,6 +26,7 @@ import BranchesPage from "../../features/admin/BranchesPage.jsx";
 import EmployeesPage from "../../features/admin/EmployeePage.jsx";
 import AdminAttendancePage from "../../features/admin/AdminAttendancePage.jsx";
 import ShiftSettingsPage from "../../features/admin/ShiftSettingsPage.jsx";
+import AttendanceCorrectionsPage from "../../features/admin/AdminAttendanceCorrectionsPage.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -312,6 +313,7 @@ export default function AdminDashboard() {
             { to: "/admin/employees", icon: Users, label: "Employees" },
             { to: "/admin/branches", icon: MapPin, label: "Branches" },
             { to: "/admin/attendance", icon: CalendarClock, label: "Attendance" },
+            { to: "/admin/attendance-corrections", icon: ClipboardList, label: "Corrections" },
             { to: "/admin/shifts", icon: Clock3, label: "Shift Settings" },
             { to: "/admin/georules", icon: MapPin, label: "Geo Rules" },
             { to: "/admin/settings", icon: Settings, label: "Admin Settings" },
@@ -412,6 +414,7 @@ export default function AdminDashboard() {
                                         }
                                     />
                                     <Route path="attendance" element={<AdminAttendancePage />} />
+                                    <Route path="attendance-corrections" element={<AttendanceCorrectionsPage />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route
                                         path="settings"
