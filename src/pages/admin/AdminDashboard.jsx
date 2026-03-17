@@ -29,6 +29,7 @@ import ShiftSettingsPage from "../../features/admin/ShiftSettingsPage.jsx";
 import AttendanceCorrectionsPage from "../../features/admin/AdminAttendanceCorrectionsPage.jsx";
 import AttendanceIntelligencePage from "../../features/admin/AdminAttendanceIntelligencePage.jsx";
 import AdminDeviceEnrollmentRequestsPage from "../../features/admin/AdminDeviceEnrollmentRequestsPage.jsx";
+import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesPage.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -317,6 +318,7 @@ export default function AdminDashboard() {
             { to: "/admin/attendance", icon: CalendarClock, label: "Attendance" },
             { to: "/admin/attendance-corrections", icon: ClipboardList, label: "Corrections" },
             { to: "/admin/intelligence", icon: ShieldCheck, label: "Intelligence" },
+            { to: "/admin/attendance-rules", icon: Settings, label: "Attendance Rules" },
             { to: "/admin/shifts", icon: Clock3, label: "Shift Settings" },
             { to: "/admin/device-enrollment", icon: ShieldCheck, label: "Device Requests" },
             { to: "/admin/georules", icon: MapPin, label: "Geo Rules" },
@@ -420,6 +422,7 @@ export default function AdminDashboard() {
                                     <Route path="attendance" element={<AdminAttendancePage />} />
                                     <Route path="attendance-corrections" element={<AttendanceCorrectionsPage />} />
                                     <Route path="intelligence" element={<AttendanceIntelligencePage />} />
+                                    <Route path="attendance-rules" element={<AdminAttendanceRulesPage />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />
                                     <Route
