@@ -12,9 +12,9 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// 🔥 THIS activates push notifications
+//THIS activates push notifications
 export const messaging = getMessaging(app);
 
-// ✅mage VAPID key
+//mage VAPID key
 export const vapidKey =
     "BOCtZVGQqqm1mEUV3Kaa59yFm3Ztj1y1uuJwMw2cSXR8yy6K_s64lYOVY40xEFlAM3J6wykc2ruzCdpg2-n9PXc";

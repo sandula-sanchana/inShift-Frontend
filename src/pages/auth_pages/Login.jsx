@@ -8,6 +8,7 @@ import { useToast } from "../../components/ui/Toast.jsx";
 import { api } from "../../lib/api.js";
 import { motion } from "framer-motion";
 import { ArrowRight, Info } from "lucide-react";
+// import { registerNotificationsForCurrentDevice } from "../../lib/registerNotifications"; // add later after FCM backend is ready
 
 export default function Login() {
   const nav = useNavigate();
@@ -26,22 +27,38 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // Backend expects: { email, password }
-      // Backend returns (your wrapper): { status, message, data: { accessToken, role } }
       const res = await api.post("/v1/auth/login", { email, password });
 
       const data = res?.data?.data;
-      const accessToken = data?.accessToken ?? data?.access_token; // supports either naming
+      const accessToken = data?.accessToken ?? data?.access_token;
       const role = data?.role;
+      const passwordMustChange = !!data?.passwordMustChange;
 
       if (!accessToken) throw new Error("Access token missing in response");
 
-      // store session (token + minimal user info)
-      setSession(accessToken, { email, role });
+      setSession(accessToken, {
+        email,
+        role,
+        passwordMustChange,
+      });
 
-      toast({ title: "Welcome", message: role ? `Signed in as ${role}.` : "Signed in successfully." });
+      if (passwordMustChange) {
+        toast({
+          title: "Password change required",
+          message: "Please change your temporary password before continuing.",
+        });
+        nav("/force-change-password");
+        return;
+      }
 
-      // Route by backend role
+      // ✅ Enable later after FCM backend/token registration is ready
+      // await registerNotificationsForCurrentDevice();
+
+      toast({
+        title: "Welcome",
+        message: role ? `Signed in as ${role}.` : "Signed in successfully.",
+      });
+
       nav(role === "ADMIN" ? "/admin" : "/emp");
     } catch (e2) {
       setErr(e2?.response?.data?.message || e2.message || "Login failed");
@@ -61,17 +78,16 @@ export default function Login() {
             transition={{ duration: 0.5 }}
             className="relative group"
         >
-          {/* Decorative background glow behind the form */}
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-3xl blur opacity-10 group-hover:opacity-20 transition duration-1000" />
+          <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-indigo-500 to-cyan-500 opacity-10 blur transition duration-1000 group-hover:opacity-20" />
 
-          <div className="relative rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl">
+          <div className="relative rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
             <form className="space-y-6" onSubmit={onSubmit}>
               <div className="space-y-4">
                 <Input
                     label="Email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white focus:ring-indigo-500"
+                    className="border-white/10 bg-white/5 text-white focus:ring-indigo-500"
                 />
 
                 <Input
@@ -79,16 +95,15 @@ export default function Login() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white focus:ring-indigo-500"
+                    className="border-white/10 bg-white/5 text-white focus:ring-indigo-500"
                 />
               </div>
 
-              {/* Error Message */}
               {err && (
                   <motion.div
                       initial={{ scale: 0.95, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-200 flex items-center gap-3"
+                      className="flex items-center gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-200"
                   >
                     <Info className="h-4 w-4 shrink-0" />
                     {err}
@@ -98,12 +113,12 @@ export default function Login() {
               <Button
                   type="submit"
                   size="lg"
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl py-6 shadow-lg shadow-indigo-600/20 transition-all active:scale-[0.98]"
+                  className="w-full rounded-2xl bg-indigo-600 py-6 text-white shadow-lg shadow-indigo-600/20 transition-all hover:bg-indigo-500 active:scale-[0.98]"
                   disabled={loading}
               >
                 {loading ? (
                     <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+                  <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24">
                     <circle
                         className="opacity-25"
                         cx="12"
@@ -131,10 +146,7 @@ export default function Login() {
               <div className="pt-4 text-center">
                 <div className="text-sm text-slate-400">
                   Don&apos;t have an account?{" "}
-                  <span className="font-semibold text-white">
-                  Contact your Admin/HR
-                </span>
-                  .
+                  <span className="font-semibold text-white">Contact your Admin/HR</span>.
                 </div>
               </div>
             </form>

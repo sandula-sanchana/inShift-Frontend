@@ -8,7 +8,9 @@ import {
     Brain,
     ShieldCheck,
     Siren,
-    Filter
+    Filter,
+    TrendingUp,
+    Flag
 } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { cn } from "../../lib/cn";
@@ -28,7 +30,7 @@ function getErrorMessage(err, fallback = "Request failed") {
     return err?.message || fallback;
 }
 
-function RiskBadge({ trustScore, highRisk, requiresReview }) {
+function RiskBadge({ highRisk, requiresReview }) {
     if (highRisk) {
         return (
             <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/20">
@@ -90,7 +92,7 @@ function ScoreBar({ trustScore }) {
     );
 }
 
-function SummaryTile({ title, value, icon: Icon, tone = "slate" }) {
+function SummaryTile({ title, value, icon: Icon, tone = "slate", subtitle }) {
     const tones = {
         rose: "text-rose-400 border-rose-500/20 bg-rose-500/5",
         amber: "text-amber-400 border-amber-500/20 bg-amber-500/5",
@@ -105,8 +107,26 @@ function SummaryTile({ title, value, icon: Icon, tone = "slate" }) {
                 <div>
                     <div className="text-xs uppercase tracking-widest opacity-70">{title}</div>
                     <div className="mt-2 text-2xl font-black">{value}</div>
+                    {subtitle && <div className="mt-1 text-xs opacity-70">{subtitle}</div>}
                 </div>
                 <div className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/[0.04]">
+                    <Icon className="h-5 w-5" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function InsightCard({ title, value, subtitle, icon: Icon }) {
+    return (
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <div className="text-xs uppercase tracking-widest text-slate-500">{title}</div>
+                    <div className="mt-2 text-lg font-bold text-white">{value}</div>
+                    <div className="mt-1 text-sm text-slate-400">{subtitle}</div>
+                </div>
+                <div className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300">
                     <Icon className="h-5 w-5" />
                 </div>
             </div>
@@ -177,6 +197,43 @@ export default function AttendanceIntelligencePage() {
         return { total, high, review, stable };
     }, [rows]);
 
+    const insights = useMemo(() => {
+        const total = rows.length;
+
+        const averageTrust = total === 0
+            ? 0
+            : Math.round(rows.reduce((sum, r) => sum + (r.trustScore ?? 0), 0) / total);
+
+        const sortedByRisk = [...rows].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
+        const highestRiskEmployee = sortedByRisk[0] || null;
+
+        const sortedByFlags = [...rows].sort((a, b) => (b.totalFlags ?? 0) - (a.totalFlags ?? 0));
+        const mostFlaggedEmployee = sortedByFlags[0] || null;
+
+        const flagCounts = {};
+        rows.forEach((row) => {
+            (row.flags || []).forEach((flag) => {
+                flagCounts[flag.flagType] = (flagCounts[flag.flagType] || 0) + 1;
+            });
+        });
+
+        const mostCommonFlagEntry = Object.entries(flagCounts).sort((a, b) => b[1] - a[1])[0] || null;
+
+        const topSuspicious = sortedByRisk
+            .filter((r) => r.highRisk || r.requiresReview)
+            .slice(0, 3);
+
+        return {
+            averageTrust,
+            highestRiskEmployee,
+            mostFlaggedEmployee,
+            mostCommonFlag: mostCommonFlagEntry
+                ? { type: mostCommonFlagEntry[0], count: mostCommonFlagEntry[1] }
+                : null,
+            topSuspicious,
+        };
+    }, [rows]);
+
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
@@ -216,6 +273,92 @@ export default function AttendanceIntelligencePage() {
                 <SummaryTile title="High Risk" value={totals.high} icon={Siren} tone="rose" />
                 <SummaryTile title="Needs Review" value={totals.review} icon={ShieldAlert} tone="amber" />
                 <SummaryTile title="Stable" value={totals.stable} icon={ShieldCheck} tone="emerald" />
+            </div>
+
+            <div className="mt-8 grid gap-4 xl:grid-cols-3">
+                <InsightCard
+                    title="Top Risk Employee"
+                    value={insights.highestRiskEmployee?.employeeName || "—"}
+                    subtitle={
+                        insights.highestRiskEmployee
+                            ? `Risk ${insights.highestRiskEmployee.riskScore ?? 0} • Trust ${insights.highestRiskEmployee.trustScore ?? 0}`
+                            : "No evaluated employees for selected date"
+                    }
+                    icon={Siren}
+                />
+
+                <InsightCard
+                    title="Most Common Flag"
+                    value={insights.mostCommonFlag?.type || "—"}
+                    subtitle={
+                        insights.mostCommonFlag
+                            ? `${insights.mostCommonFlag.count} occurrence(s)`
+                            : "No active flags for selected date"
+                    }
+                    icon={Flag}
+                />
+
+                <InsightCard
+                    title="Average Trust Score"
+                    value={`${insights.averageTrust}/100`}
+                    subtitle="Average trust across evaluated employees"
+                    icon={TrendingUp}
+                />
+            </div>
+
+            <div className="mt-8">
+                <div className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    Top Suspicious Cases
+                </div>
+
+                {insights.topSuspicious.length === 0 ? (
+                    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 text-sm text-slate-400">
+                        No suspicious cases for the selected date.
+                    </div>
+                ) : (
+                    <div className="grid gap-4 xl:grid-cols-3">
+                        {insights.topSuspicious.map((row) => (
+                            <div
+                                key={`top-${row.employeeId}-${row.attendanceDate}`}
+                                className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div>
+                                        <div className="text-sm font-bold text-white">
+                                            {row.employeeName}
+                                        </div>
+                                        <div className="mt-1 text-xs text-slate-500">
+                                            #{row.employeeId}
+                                        </div>
+                                    </div>
+                                    <RiskBadge
+                                        highRisk={row.highRisk}
+                                        requiresReview={row.requiresReview}
+                                    />
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                                    <div className="rounded-2xl bg-white/[0.03] p-3">
+                                        <div className="text-xs text-slate-500">Risk</div>
+                                        <div className="mt-1 text-xl font-black text-white">
+                                            {row.riskScore ?? 0}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-2xl bg-white/[0.03] p-3">
+                                        <div className="text-xs text-slate-500">Flags</div>
+                                        <div className="mt-1 text-xl font-black text-white">
+                                            {row.totalFlags ?? 0}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4">
+                                    <ScoreBar trustScore={row.trustScore ?? 100} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl">
@@ -298,7 +441,6 @@ export default function AttendanceIntelligencePage() {
 
                                 <div className="flex flex-wrap gap-3">
                                     <RiskBadge
-                                        trustScore={row.trustScore}
                                         highRisk={row.highRisk}
                                         requiresReview={row.requiresReview}
                                     />
