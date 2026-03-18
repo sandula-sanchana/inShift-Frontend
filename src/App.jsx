@@ -6,6 +6,7 @@ import Login from "./pages/auth_pages/Login.jsx";
 
 import EmployeeDashboard from "./pages/emp/EmployeeDashboard.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import ForceChangePassword from "./features/employee/ForceChangePassword.jsx";
 
 // Optional: simple unauthorized page
 function Unauthorized() {
@@ -22,13 +23,19 @@ function ProtectedRoute({ children, allowedRoles }) {
 
     const token = authStore((s) => s.token);
     const role = authStore((s) => s.user?.role);
+    const mustChange = authStore((s) => s.user?.passwordMustChange);
 
-    // 1) Not logged in
+    //Not logged in
     if (!token) {
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
-    // 2) Logged in but role not allowed
+    //Force password change flow
+    if (mustChange) {
+        return <Navigate to="/force-change-password" replace />;
+    }
+
+    //Role restriction
     if (allowedRoles && allowedRoles.length > 0) {
         if (!role || !allowedRoles.includes(role)) {
             return <Navigate to="/unauthorized" replace />;
@@ -44,6 +51,7 @@ export default function App() {
             {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/force-change-password" element={<ForceChangePassword />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
             {/* Employee App */}
