@@ -1,5 +1,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import { NavLink, useNavigate, Routes, Route, Navigate } from "react-router-dom";
+import { listenForeground } from "../../lib/notifications.js";
+import { useToast } from "../../components/ui/Toast.jsx";
 import {
     LayoutDashboard,
     Bell,
@@ -103,6 +105,22 @@ export default function EmployeeDashboard() {
             ignore = true;
         };
     }, []);
+
+    const toast = useToast((s) => s.push);
+
+    useEffect(() => {
+        const unsubscribe = listenForeground((payload) => {
+            toast({
+                title: payload?.notification?.title || "InShift",
+                message: payload?.notification?.body || "New notification received.",
+                variant: "success",
+            });
+        });
+
+        return () => {
+            if (typeof unsubscribe === "function") unsubscribe();
+        };
+    }, [toast]);
 
     const nav = useMemo(
         () => [
