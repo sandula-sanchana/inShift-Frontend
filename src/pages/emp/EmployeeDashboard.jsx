@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import { NavLink, useNavigate, Routes, Route, Navigate } from "react-router-dom";
 import {
     LayoutDashboard,
@@ -22,6 +22,7 @@ import Verify from "../../features/employee/verification/Verify.jsx";
 import Shifts from "../../features/employee/shifts/Shifts.jsx";
 import Security from "../../features/employee/security.jsx";
 import Corrections from "../../features/employee/AttendanceCorrections.jsx";
+import {api} from "../../lib/api.js";
 
 function NavItem({ to, icon: Icon, label }) {
     return (
@@ -79,7 +80,29 @@ function EmpOverview() {
 
 export default function EmployeeDashboard() {
     const navigate = useNavigate();
-    const { user, clear } = authStore();
+    const user = authStore((s) => s.user);
+    const clearSession = authStore((s) => s.clearSession);
+
+    const [me, setMe] = useState(null);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadMe() {
+            try {
+                const res = await api.get("/v1/emp/me");
+                const data = res?.data?.data;
+                if (!ignore) setMe(data || null);
+            } catch {
+                if (!ignore) setMe(null);
+            }
+        }
+
+        loadMe();
+        return () => {
+            ignore = true;
+        };
+    }, []);
 
     const nav = useMemo(
         () => [
@@ -94,6 +117,10 @@ export default function EmployeeDashboard() {
         ],
         []
     );
+
+    if (me?.mustChangePassword) {
+        return <Navigate to="/force-change-password" replace />;
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
@@ -111,19 +138,21 @@ export default function EmployeeDashboard() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <div className="hidden sm:block text-right">
-                            <div className="text-sm font-semibold text-slate-900">{user?.name || "Employee"}</div>
-                            <div className="text-xs text-slate-600">EMPLOYEE</div>
+                        <div className="text-sm font-bold text-slate-900">
+                            {me?.fullName || user?.email || "Employee"}
+                        </div>
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-500">
+                            {user?.role || "EMPLOYEE"}
                         </div>
 
                         <button
                             className={cn(
-                                "inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold",
-                                "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200",
-                                "hover:bg-slate-50 hover:text-slate-900"
+                                "inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all",
+                                "border border-rose-200 bg-rose-50 text-rose-600 shadow-sm",
+                                "hover:bg-rose-500 hover:text-white hover:shadow-lg hover:shadow-rose-500/20"
                             )}
                             onClick={() => {
-                                clear();
+                                clearSession();
                                 navigate("/login");
                             }}
                         >

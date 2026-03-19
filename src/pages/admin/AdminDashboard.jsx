@@ -308,7 +308,29 @@ function AdminOverview() {
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
-    const { user, clear } = authStore();
+    const user = authStore((s) => s.user);
+    const clearSession = authStore((s) => s.clearSession);
+
+    const [me, setMe] = useState(null);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadMe() {
+            try {
+                const res = await api.get("/v1/emp/me");
+                const data = res?.data?.data;
+                if (!ignore) setMe(data || null);
+            } catch {
+                if (!ignore) setMe(null);
+            }
+        }
+
+        loadMe();
+        return () => {
+            ignore = true;
+        };
+    }, []);
 
     const nav = useMemo(
         () => [
@@ -326,6 +348,10 @@ export default function AdminDashboard() {
         ],
         []
     );
+
+    if (me?.mustChangePassword) {
+        return <Navigate to="/force-change-password" replace />;
+    }
 
     return (
         <div className="min-h-screen bg-[#020617] text-slate-300 selection:bg-indigo-500/30 font-sans antialiased overflow-x-hidden">
@@ -359,7 +385,9 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-6">
                         <div className="hidden md:flex items-center gap-4 px-4 py-2 rounded-2xl bg-white/5 border border-white/5">
                             <div className="leading-tight text-right">
-                                <p className="text-sm font-bold text-white">{user?.name || "Admin User"}</p>
+                                <p className="text-sm font-bold text-white">
+                                    {me?.fullName || user?.name || "Admin User"}
+                                </p>
                                 <p className="text-[10px] font-medium text-indigo-400 uppercase tracking-tight">Administrator</p>
                             </div>
                         </div>
@@ -367,7 +395,7 @@ export default function AdminDashboard() {
                         <button
                             className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 transition-all hover:bg-rose-500 hover:text-white hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-90"
                             onClick={() => {
-                                clear();
+                                clearSession();
                                 navigate("/login");
                             }}
                         >

@@ -1,20 +1,17 @@
-import { getToken, onMessage } from "firebase/messaging";
+import { getToken, onMessage, isSupported } from "firebase/messaging";
 import { messaging, vapidKey } from "./firebase";
 
-// Register SW and wait until it's ACTIVE
 async function getActiveServiceWorkerRegistration() {
     if (!("serviceWorker" in navigator)) return null;
 
-
     await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-
-    // ✅ Wait until SW is ready (active + controlling page)
-    const reg = await navigator.serviceWorker.ready;
-
-    return reg;
+    return await navigator.serviceWorker.ready;
 }
 
 export async function enableNotifications() {
+    const supported = await isSupported().catch(() => false);
+    if (!supported) return null;
+
     if (!("Notification" in window)) return null;
 
     const permission = await Notification.requestPermission();
@@ -31,8 +28,7 @@ export async function enableNotifications() {
         serviceWorkerRegistration: swReg
     });
 
-    console.log("FCM TOKEN:", token);
-    return token;
+    return token || null;
 }
 
 export function listenForeground(handler) {
