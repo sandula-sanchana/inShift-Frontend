@@ -1,7 +1,5 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate, Routes, Route, Navigate } from "react-router-dom";
-import { listenForeground } from "../../lib/notifications.js";
-import { useToast } from "../../components/ui/Toast.jsx";
 import {
     LayoutDashboard,
     Bell,
@@ -13,10 +11,17 @@ import {
     LogOut,
     ClipboardList
 } from "lucide-react";
+
 import { cn } from "../../lib/cn";
+import { api } from "../../lib/api.js";
 import { authStore } from "../../features/auth/store";
 import { LogoMark } from "../../components/common/Logo";
-
+import { useToast } from "../../components/ui/Toast.jsx";
+import {
+    listenForeground,
+    syncExistingNotificationToken
+} from "../../lib/notifications.js";
+import { useServiceWorkerNavigation } from "../../lib/useServiceWorkerNavigation.js";
 
 import Notifications from "../../features/employee/notification/Notifications.jsx";
 import Attendance from "../../features/employee/Attendance/Attendance.jsx";
@@ -24,12 +29,13 @@ import Verify from "../../features/employee/verification/Verify.jsx";
 import Shifts from "../../features/employee/shifts/Shifts.jsx";
 import Security from "../../features/employee/security.jsx";
 import Corrections from "../../features/employee/AttendanceCorrections.jsx";
-import {api} from "../../lib/api.js";
+import PresenceCheck from "../../features/employee/PresenceCheck.jsx";
 
 function NavItem({ to, icon: Icon, label }) {
     return (
         <NavLink
             to={to}
+            end={to === "/emp"}
             className={({ isActive }) =>
                 cn(
                     "group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-semibold transition",
@@ -39,16 +45,16 @@ function NavItem({ to, icon: Icon, label }) {
                 )
             }
         >
-      <span
-          className={cn(
-              "grid h-8 w-8 place-items-center rounded-xl transition",
-              "ring-1 ring-slate-200 bg-white text-slate-700",
-              "group-hover:bg-white group-hover:text-slate-900",
-              "group-[.bg-slate-900]:bg-slate-800 group-[.bg-slate-900]:text-white group-[.bg-slate-900]:ring-slate-700"
-          )}
-      >
-        <Icon className="h-4.5 w-4.5" />
-      </span>
+            <span
+                className={cn(
+                    "grid h-8 w-8 place-items-center rounded-xl transition",
+                    "ring-1 ring-slate-200 bg-white text-slate-700",
+                    "group-hover:bg-white group-hover:text-slate-900",
+                    "group-[.bg-slate-900]:bg-slate-800 group-[.bg-slate-900]:text-white group-[.bg-slate-900]:ring-slate-700"
+                )}
+            >
+                <Icon className="h-4.5 w-4.5" />
+            </span>
             <span className="truncate">{label}</span>
         </NavLink>
     );
@@ -82,31 +88,38 @@ function EmpOverview() {
 
 export default function EmployeeDashboard() {
     const navigate = useNavigate();
+    const toast = useToast((s) => s.push);
+
     const user = authStore((s) => s.user);
     const clearSession = authStore((s) => s.clearSession);
 
     const [me, setMe] = useState(null);
+    const [meLoading, setMeLoading] = useState(true);
+
+    useServiceWorkerNavigation();
 
     useEffect(() => {
         let ignore = false;
 
         async function loadMe() {
+            setMeLoading(true);
             try {
                 const res = await api.get("/v1/emp/me");
                 const data = res?.data?.data;
                 if (!ignore) setMe(data || null);
             } catch {
                 if (!ignore) setMe(null);
+            } finally {
+                if (!ignore) setMeLoading(false);
             }
         }
 
         loadMe();
+
         return () => {
             ignore = true;
         };
     }, []);
-
-    const toast = useToast((s) => s.push);
 
     useEffect(() => {
         const unsubscribe = listenForeground((payload) => {
@@ -122,11 +135,20 @@ export default function EmployeeDashboard() {
         };
     }, [toast]);
 
+    useEffect(() => {
+        if (!me) return;
+
+        syncExistingNotificationToken().catch((err) => {
+            console.error("Notification token sync failed:", err);
+        });
+    }, [me]);
+
     const nav = useMemo(
         () => [
             { to: "/emp", icon: LayoutDashboard, label: "Overview" },
             { to: "/emp/notifications", icon: Bell, label: "Notifications" },
             { to: "/emp/attendance", icon: BadgeCheck, label: "Attendance" },
+            { to: "/emp/presence-check", icon: ShieldCheck, label: "Presence Check" },
             { to: "/emp/corrections", icon: ClipboardList, label: "Corrections" },
             { to: "/emp/verify", icon: Fingerprint, label: "Verify" },
             { to: "/emp/shifts", icon: CalendarDays, label: "My Shifts" },
@@ -136,14 +158,13 @@ export default function EmployeeDashboard() {
         []
     );
 
-    if (me?.mustChangePassword) {
+    if (!meLoading && me?.mustChangePassword) {
         return <Navigate to="/force-change-password" replace />;
     }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
             <div className="mx-auto max-w-7xl px-4 py-6 lg:py-8">
-                {/* Top bar */}
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -159,8 +180,9 @@ export default function EmployeeDashboard() {
                         <div className="text-sm font-bold text-slate-900">
                             {me?.fullName || user?.email || "Employee"}
                         </div>
+
                         <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-500">
-                            {user?.role || "EMPLOYEE"}
+                            {me?.role || user?.role || "EMPLOYEE"}
                         </div>
 
                         <button
@@ -180,7 +202,6 @@ export default function EmployeeDashboard() {
                     </div>
                 </div>
 
-                {/* Layout */}
                 <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
                     <aside className="h-fit rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
                         <div className="px-4 py-4">
@@ -196,15 +217,18 @@ export default function EmployeeDashboard() {
                     </aside>
 
                     <main className="min-w-0 rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 p-6">
-                        {/* ✅ ROUTES INSIDE EMPLOYEE */}
                         <Routes>
                             <Route index element={<EmpOverview />} />
                             <Route path="notifications" element={<Notifications />} />
                             <Route path="attendance" element={<Attendance />} />
+                            <Route path="presence-check" element={<PresenceCheck />} />
                             <Route path="corrections" element={<Corrections />} />
                             <Route path="verify" element={<Verify />} />
                             <Route path="shifts" element={<Shifts />} />
-                            <Route path="ot" element={<div className="text-slate-900 font-semibold">My OT Page</div>} />
+                            <Route
+                                path="ot"
+                                element={<div className="text-slate-900 font-semibold">My OT Page</div>}
+                            />
                             <Route path="security" element={<Security />} />
                             <Route path="*" element={<Navigate to="/emp" replace />} />
                         </Routes>

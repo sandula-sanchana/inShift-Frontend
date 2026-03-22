@@ -30,6 +30,7 @@ import AttendanceCorrectionsPage from "../../features/admin/AdminAttendanceCorre
 import AttendanceIntelligencePage from "../../features/admin/AdminAttendanceIntelligencePage.jsx";
 import AdminDeviceEnrollmentRequestsPage from "../../features/admin/AdminDeviceEnrollmentRequestsPage.jsx";
 import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesPage.jsx";
+import AdminPresenceChecksPage from "../../features/admin/AdminPresenceChecksPage.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -340,6 +341,7 @@ export default function AdminDashboard() {
             { to: "/admin/attendance", icon: CalendarClock, label: "Attendance" },
             { to: "/admin/attendance-corrections", icon: ClipboardList, label: "Corrections" },
             { to: "/admin/intelligence", icon: ShieldCheck, label: "Intelligence" },
+            { to: "/admin/presence-checks", icon: ShieldCheck, label: "Presence Checks" },
             { to: "/admin/attendance-rules", icon: Settings, label: "Attendance Rules" },
             { to: "/admin/shifts", icon: Clock3, label: "Shift Settings" },
             { to: "/admin/device-enrollment", icon: ShieldCheck, label: "Device Requests" },
@@ -376,7 +378,7 @@ export default function AdminDashboard() {
                         <div>
                             <div className="text-xl font-black tracking-tighter text-white">InShift<span className="text-indigo-500">.</span></div>
                             <div className="flex items-center gap-2">
-                                <div className="h-1 w-1 rounded-full bg-indigo-500 animate-pulse" />
+                                <div clas   sName="h-1 w-1 rounded-full bg-indigo-500 animate-pulse" />
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Admin Portal</span>
                             </div>
                         </div>
@@ -450,6 +452,7 @@ export default function AdminDashboard() {
                                     <Route path="attendance" element={<AdminAttendancePage />} />
                                     <Route path="attendance-corrections" element={<AttendanceCorrectionsPage />} />
                                     <Route path="intelligence" element={<AttendanceIntelligencePage />} />
+                                    <Route path="presence-checks" element={<AdminPresenceChecksPage />} />
                                     <Route path="attendance-rules" element={<AdminAttendanceRulesPage />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />

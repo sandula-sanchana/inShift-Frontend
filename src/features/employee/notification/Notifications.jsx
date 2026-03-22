@@ -10,6 +10,7 @@ import { enableNotifications } from "../../../lib/notifications.js";
 
 const DEVICE_TOKEN_BASE = "/api/v1/emp/device-tokens";
 const LOCAL_FCM_TOKEN_KEY = "inshift_fcm_token";
+const LOCAL_PREFS_KEY = "inshift_notification_prefs";
 
 function getDeviceType() {
   const ua = navigator.userAgent || "";
@@ -35,6 +36,13 @@ function getDeviceName() {
   return "Web Browser";
 }
 
+function getPermissionValue() {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return "unsupported";
+  }
+  return Notification.permission;
+}
+
 export default function Notifications() {
   const toast = useToast((s) => s.push);
 
@@ -42,10 +50,7 @@ export default function Notifications() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
 
-  const [permission, setPermission] = useState(
-      typeof Notification !== "undefined" ? Notification.permission : "unsupported"
-  );
-
+  const [permission, setPermission] = useState(getPermissionValue());
   const [enabled, setEnabled] = useState(false);
   const [registeredDevice, setRegisteredDevice] = useState(null);
 
@@ -56,21 +61,18 @@ export default function Notifications() {
   });
 
   function toggle(key) {
-    setPrefs((p) => ({ ...p, [key]: !p[key] }));
+    setPrefs((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   }
 
   async function loadMyTokens() {
     try {
       const res = await api.get(`${DEVICE_TOKEN_BASE}/my`);
       const tokens = res?.data?.data || [];
-      const localToken = localStorage.getItem(LOCAL_FCM_TOKEN_KEY);
 
-      const matched =
-          tokens.find((t) => localToken && t?.fcmToken === localToken) ||
-          tokens[0] ||
-          null;
-
-      setRegisteredDevice(matched);
+      setRegisteredDevice(tokens[0] || null);
       setEnabled(tokens.length > 0);
     } catch (e) {
       setRegisteredDevice(null);
@@ -79,7 +81,19 @@ export default function Notifications() {
   }
 
   useEffect(() => {
+    setPermission(getPermissionValue());
     loadMyTokens();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_PREFS_KEY);
+      if (raw) {
+        setPrefs(JSON.parse(raw));
+      }
+    } catch {
+      // ignore invalid local data
+    }
   }, []);
 
   async function enable() {
@@ -87,8 +101,7 @@ export default function Notifications() {
 
     try {
       const token = await enableNotifications();
-
-      setPermission(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
+      setPermission(getPermissionValue());
 
       if (!token) {
         toast({
@@ -118,6 +131,8 @@ export default function Notifications() {
         message: "This device is now registered for push notifications.",
         variant: "success",
       });
+
+      await loadMyTokens();
     } catch (e) {
       console.error(e);
       toast({
@@ -132,6 +147,7 @@ export default function Notifications() {
 
   async function disableCurrentDevice() {
     const token = localStorage.getItem(LOCAL_FCM_TOKEN_KEY);
+
     if (!token) {
       toast({
         title: "No token found",
@@ -142,8 +158,10 @@ export default function Notifications() {
     }
 
     setLoading(true);
+
     try {
       await api.post(`${DEVICE_TOKEN_BASE}/deactivate`, { fcmToken: token });
+
       localStorage.removeItem(LOCAL_FCM_TOKEN_KEY);
       setRegisteredDevice(null);
       setEnabled(false);
@@ -153,6 +171,8 @@ export default function Notifications() {
         message: "This device will no longer receive push notifications.",
         variant: "success",
       });
+
+      await loadMyTokens();
     } catch (e) {
       toast({
         title: "Disable failed",
@@ -166,9 +186,9 @@ export default function Notifications() {
 
   async function save() {
     setSavingPrefs(true);
+
     try {
-      // connect later to backend preferences endpoint
-      localStorage.setItem("inshift_notification_prefs", JSON.stringify(prefs));
+      localStorage.setItem(LOCAL_PREFS_KEY, JSON.stringify(prefs));
 
       toast({
         title: "Preferences saved",
@@ -188,8 +208,8 @@ export default function Notifications() {
 
   async function sendTest() {
     setSendingTest(true);
+
     try {
-      // Replace later with your real backend endpoint
       toast({
         title: "Test endpoint pending",
         message: "Create a backend endpoint later to send a test FCM notification.",
@@ -221,7 +241,7 @@ export default function Notifications() {
             }
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle>Device & push setup</CardTitle>
@@ -264,6 +284,11 @@ export default function Notifications() {
                         <div className="mt-1 text-xs text-slate-500">
                           Type: {registeredDevice.deviceType || "-"}
                         </div>
+                        {registeredDevice.lastUsedAt && (
+                            <div className="mt-1 text-xs text-slate-500">
+                              Last used: {new Date(registeredDevice.lastUsedAt).toLocaleString()}
+                            </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -300,14 +325,26 @@ export default function Notifications() {
 
             <CardContent className="space-y-3">
               {[
-                { key: "attendanceChecks", title: "Attendance checks", desc: "Scheduled / random verification requests." },
-                { key: "shiftUpdates", title: "Shift updates", desc: "Swap requests, reschedules, open shifts." },
-                { key: "otUpdates", title: "Overtime updates", desc: "Approvals, rejection reasons, payment status." },
+                {
+                  key: "attendanceChecks",
+                  title: "Attendance checks",
+                  desc: "Scheduled / random verification requests.",
+                },
+                {
+                  key: "shiftUpdates",
+                  title: "Shift updates",
+                  desc: "Swap requests, reschedules, open shifts.",
+                },
+                {
+                  key: "otUpdates",
+                  title: "Overtime updates",
+                  desc: "Approvals, rejection reasons, payment status.",
+                },
               ].map((p) => (
                   <button
                       key={p.key}
                       onClick={() => toggle(p.key)}
-                      className="w-full text-left rounded-2xl border border-slate-200 bg-white p-4 hover:bg-slate-50 transition"
+                      className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:bg-slate-50"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
