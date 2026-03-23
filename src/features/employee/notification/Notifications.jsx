@@ -8,7 +8,7 @@ import { useToast } from "../../../components/ui/Toast.jsx";
 import { api } from "../../../lib/api.js";
 import { enableNotifications } from "../../../lib/notifications.js";
 
-const DEVICE_TOKEN_BASE = "/api/v1/emp/device-tokens";
+const DEVICE_TOKEN_BASE = "/v1/emp/device-tokens";
 const LOCAL_FCM_TOKEN_KEY = "inshift_fcm_token";
 const LOCAL_PREFS_KEY = "inshift_notification_prefs";
 

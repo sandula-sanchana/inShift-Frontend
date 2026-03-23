@@ -31,6 +31,40 @@ import Security from "../../features/employee/security.jsx";
 import Corrections from "../../features/employee/AttendanceCorrections.jsx";
 import PresenceCheck from "../../features/employee/PresenceCheck.jsx";
 
+const DEVICE_FP_KEY = "inshift_device_fingerprint";
+
+function getOrCreateDeviceFingerprint() {
+    let fp = localStorage.getItem(DEVICE_FP_KEY);
+    if (fp) return fp;
+
+    fp =
+        typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    localStorage.setItem(DEVICE_FP_KEY, fp);
+    return fp;
+}
+
+function detectRequestedTrustType() {
+    const ua = navigator.userAgent || "";
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    return isMobile ? "MOBILE" : "COMPANY_PC";
+}
+
+function buildDeviceName() {
+    const ua = navigator.userAgent || "Unknown Device";
+
+    if (/Android/i.test(ua)) return "Android Device";
+    if (/iPhone/i.test(ua)) return "iPhone";
+    if (/iPad/i.test(ua)) return "iPad";
+    if (/Windows/i.test(ua)) return "Windows PC";
+    if (/Macintosh|Mac OS X/i.test(ua)) return "Mac";
+    if (/Linux/i.test(ua)) return "Linux Device";
+
+    return "Unknown Device";
+}
+
 function NavItem({ to, icon: Icon, label }) {
     return (
         <NavLink
@@ -86,6 +120,18 @@ function EmpOverview() {
     );
 }
 
+function DevicePendingApproval() {
+    return (
+        <div className="mx-auto max-w-xl rounded-3xl border border-amber-200 bg-amber-50 p-6">
+            <div className="text-lg font-bold text-amber-900">Device Pending Approval</div>
+            <p className="mt-2 text-sm text-amber-800">
+                This device has been registered and is waiting for admin approval.
+                Until approval, trusted verification features will remain blocked.
+            </p>
+        </div>
+    );
+}
+
 export default function EmployeeDashboard() {
     const navigate = useNavigate();
     const toast = useToast((s) => s.push);
@@ -96,25 +142,50 @@ export default function EmployeeDashboard() {
     const [me, setMe] = useState(null);
     const [meLoading, setMeLoading] = useState(true);
 
+    const [deviceEnrollment, setDeviceEnrollment] = useState(null);
+    const [deviceLoading, setDeviceLoading] = useState(true);
+
     useServiceWorkerNavigation();
 
     useEffect(() => {
         let ignore = false;
 
-        async function loadMe() {
+        async function bootstrap() {
             setMeLoading(true);
+            setDeviceLoading(true);
+
             try {
-                const res = await api.get("/v1/emp/me");
-                const data = res?.data?.data;
-                if (!ignore) setMe(data || null);
-            } catch {
-                if (!ignore) setMe(null);
+                const meRes = await api.get("/v1/emp/me");
+                const meData = meRes?.data?.data || null;
+
+                if (!ignore) setMe(meData);
+
+                const enrollPayload = {
+                    deviceFingerprint: getOrCreateDeviceFingerprint(),
+                    deviceName: buildDeviceName(),
+                    userAgent: navigator.userAgent || "",
+                    requestedTrustType: detectRequestedTrustType(),
+                };
+
+                const enrollRes = await api.post("/v1/emp/device/enroll", enrollPayload);
+                const enrollData = enrollRes?.data?.data || null;
+
+                if (!ignore) setDeviceEnrollment(enrollData);
+            } catch (err) {
+                console.error("Dashboard bootstrap failed:", err);
+                if (!ignore) {
+                    setMe(null);
+                    setDeviceEnrollment(null);
+                }
             } finally {
-                if (!ignore) setMeLoading(false);
+                if (!ignore) {
+                    setMeLoading(false);
+                    setDeviceLoading(false);
+                }
             }
         }
 
-        loadMe();
+        bootstrap();
 
         return () => {
             ignore = true;
@@ -136,12 +207,13 @@ export default function EmployeeDashboard() {
     }, [toast]);
 
     useEffect(() => {
-        if (!me) return;
+        if (!me || !deviceEnrollment) return;
+        if (deviceEnrollment?.approvalStatus !== "APPROVED") return;
 
         syncExistingNotificationToken().catch((err) => {
             console.error("Notification token sync failed:", err);
         });
-    }, [me]);
+    }, [me, deviceEnrollment]);
 
     const nav = useMemo(
         () => [
@@ -161,6 +233,20 @@ export default function EmployeeDashboard() {
     if (!meLoading && me?.mustChangePassword) {
         return <Navigate to="/force-change-password" replace />;
     }
+
+    if (meLoading || deviceLoading) {
+        return (
+            <div className="min-h-screen grid place-items-center bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
+                <div className="rounded-2xl bg-white px-6 py-4 shadow-sm ring-1 ring-slate-200">
+                    <div className="text-sm font-semibold text-slate-900">Loading your workspace...</div>
+                </div>
+            </div>
+        );
+    }
+
+    const isPending = deviceEnrollment?.approvalStatus === "PENDING";
+    const isApproved = deviceEnrollment?.approvalStatus === "APPROVED";
+    const approvedType = deviceEnrollment?.approvedTrustType;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
@@ -185,6 +271,17 @@ export default function EmployeeDashboard() {
                             {me?.role || user?.role || "EMPLOYEE"}
                         </div>
 
+                        {deviceEnrollment && (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
+                                <div className="font-semibold text-slate-900">
+                                    Device: {deviceEnrollment.approvalStatus}
+                                </div>
+                                <div className="text-slate-600">
+                                    {approvedType || "Awaiting approval"}
+                                </div>
+                            </div>
+                        )}
+
                         <button
                             className={cn(
                                 "inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all",
@@ -202,38 +299,50 @@ export default function EmployeeDashboard() {
                     </div>
                 </div>
 
-                <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
-                    <aside className="h-fit rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-                        <div className="px-4 py-4">
-                            <div className="text-sm font-semibold text-slate-900">Navigation</div>
-                            <div className="text-xs text-slate-600">Employee modules</div>
-                        </div>
+                {isPending ? (
+                    <div className="mt-8">
+                        <DevicePendingApproval />
+                    </div>
+                ) : (
+                    <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
+                        <aside className="h-fit rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+                            <div className="px-4 py-4">
+                                <div className="text-sm font-semibold text-slate-900">Navigation</div>
+                                <div className="text-xs text-slate-600">Employee modules</div>
+                            </div>
 
-                        <div className="px-3 pb-3 space-y-1">
-                            {nav.map((n) => (
-                                <NavItem key={n.to} {...n} />
-                            ))}
-                        </div>
-                    </aside>
+                            <div className="px-3 pb-3 space-y-1">
+                                {nav.map((n) => (
+                                    <NavItem key={n.to} {...n} />
+                                ))}
+                            </div>
+                        </aside>
 
-                    <main className="min-w-0 rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 p-6">
-                        <Routes>
-                            <Route index element={<EmpOverview />} />
-                            <Route path="notifications" element={<Notifications />} />
-                            <Route path="attendance" element={<Attendance />} />
-                            <Route path="presence-check" element={<PresenceCheck />} />
-                            <Route path="corrections" element={<Corrections />} />
-                            <Route path="verify" element={<Verify />} />
-                            <Route path="shifts" element={<Shifts />} />
-                            <Route
-                                path="ot"
-                                element={<div className="text-slate-900 font-semibold">My OT Page</div>}
-                            />
-                            <Route path="security" element={<Security />} />
-                            <Route path="*" element={<Navigate to="/emp" replace />} />
-                        </Routes>
-                    </main>
-                </div>
+                        <main className="min-w-0 rounded-3xl bg-white shadow-sm ring-1 ring-slate-200 p-6">
+                            {!isApproved && (
+                                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                    This device is not fully approved yet.
+                                </div>
+                            )}
+
+                            <Routes>
+                                <Route index element={<EmpOverview />} />
+                                <Route path="notifications" element={<Notifications />} />
+                                <Route path="attendance" element={<Attendance />} />
+                                <Route path="presence-check" element={<PresenceCheck />} />
+                                <Route path="corrections" element={<Corrections />} />
+                                <Route path="verify" element={<Verify />} />
+                                <Route path="shifts" element={<Shifts />} />
+                                <Route
+                                    path="ot"
+                                    element={<div className="text-slate-900 font-semibold">My OT Page</div>}
+                                />
+                                <Route path="security" element={<Security />} />
+                                <Route path="*" element={<Navigate to="/emp" replace />} />
+                            </Routes>
+                        </main>
+                    </div>
+                )}
             </div>
         </div>
     );

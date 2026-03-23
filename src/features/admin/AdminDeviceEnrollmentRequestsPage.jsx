@@ -8,7 +8,9 @@ import {
     Search,
     Smartphone,
     User,
-    Clock3
+    Clock3,
+    MonitorSmartphone,
+    Laptop
 } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { cn } from "../../lib/cn";
@@ -47,6 +49,27 @@ function StatusBadge({ status }) {
     );
 }
 
+function TrustBadge({ value }) {
+    if (!value) {
+        return (
+            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 bg-white/5 text-slate-300 ring-white/10">
+                Not selected
+            </span>
+        );
+    }
+
+    const tone =
+        value === "COMPANY_PC"
+            ? "bg-indigo-500/10 text-indigo-300 ring-indigo-500/20"
+            : "bg-emerald-500/10 text-emerald-300 ring-emerald-500/20";
+
+    return (
+        <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1", tone)}>
+            {value}
+        </span>
+    );
+}
+
 export default function AdminDeviceEnrollmentRequestsPage() {
     const [loading, setLoading] = useState(true);
     const [submittingId, setSubmittingId] = useState(null);
@@ -81,20 +104,32 @@ export default function AdminDeviceEnrollmentRequestsPage() {
             String(r.employeeId || "").toLowerCase().includes(q) ||
             String(r.requestedDeviceName || "").toLowerCase().includes(q) ||
             String(r.requestedUserAgent || "").toLowerCase().includes(q) ||
-            String(r.status || "").toLowerCase().includes(q)
+            String(r.status || "").toLowerCase().includes(q) ||
+            String(r.deviceFingerprint || "").toLowerCase().includes(q) ||
+            String(r.requestedTrustType || "").toLowerCase().includes(q)
         );
     }, [rows, query]);
 
-    const handleDecision = async (id, approve) => {
+    const handleDecision = async (id, approve, trustType = null) => {
         try {
             setSubmittingId(id);
+
             await api.patch(`${BASE}/${id}/decision`, {
                 approve,
-                adminComment: approve ? "Approved by admin" : "Rejected by admin",
+                approvedTrustType: trustType,
+                adminComment: approve
+                    ? `Approved as ${trustType}`
+                    : "Rejected by admin",
             });
+
             await loadData();
         } catch (e) {
-            setError(getErrorMessage(e, approve ? "Failed to approve request" : "Failed to reject request"));
+            setError(
+                getErrorMessage(
+                    e,
+                    approve ? "Failed to approve request" : "Failed to reject request"
+                )
+            );
         } finally {
             setSubmittingId(null);
         }
@@ -111,7 +146,7 @@ export default function AdminDeviceEnrollmentRequestsPage() {
                         </h1>
                     </div>
                     <p className="mt-2 text-sm text-slate-400">
-                        Review and control new passkey device registration requests.
+                        Review pending device requests and approve them as trusted mobile devices or company PCs.
                     </p>
                 </div>
 
@@ -144,7 +179,7 @@ export default function AdminDeviceEnrollmentRequestsPage() {
                         <input
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Search employee, device, user-agent, or status..."
+                            placeholder="Search employee, device, fingerprint, trust type, or status..."
                             className="w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-10 pr-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500/30"
                         />
                     </div>
@@ -167,7 +202,7 @@ export default function AdminDeviceEnrollmentRequestsPage() {
                             className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-2xl"
                         >
                             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                                <div>
+                                <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-3">
                                         <div className="text-lg font-bold text-white">
                                             {row.employeeName || "Unknown Employee"}
@@ -176,32 +211,58 @@ export default function AdminDeviceEnrollmentRequestsPage() {
                                             #{row.employeeId || "--"}
                                         </div>
                                         <StatusBadge status={row.status} />
+                                        <TrustBadge value={row.requestedTrustType} />
                                     </div>
 
-                                    <div className="mt-2 grid gap-2 text-sm text-slate-400">
+                                    <div className="mt-3 grid gap-2 text-sm text-slate-400">
                                         <div className="flex items-center gap-2">
                                             <Smartphone className="h-4 w-4 text-slate-500" />
                                             <span>Requested Device: {row.requestedDeviceName || "--"}</span>
                                         </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <ShieldCheck className="h-4 w-4 text-slate-500" />
+                                            <span>Requested Trust Type: {row.requestedTrustType || "--"}</span>
+                                        </div>
+
                                         <div className="flex items-center gap-2">
                                             <Clock3 className="h-4 w-4 text-slate-500" />
                                             <span>Requested At: {row.createdAt || "--"}</span>
                                         </div>
+
                                         <div className="flex items-center gap-2">
                                             <User className="h-4 w-4 text-slate-500" />
                                             <span>Risk Impact: {row.riskScoreImpact ?? 0}</span>
                                         </div>
+
+                                        {row.deviceFingerprint && (
+                                            <div className="flex items-start gap-2">
+                                                <ShieldCheck className="mt-0.5 h-4 w-4 text-slate-500" />
+                                                <span className="break-all">
+                                                    Device Fingerprint: {row.deviceFingerprint}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
                                     <button
-                                        onClick={() => handleDecision(row.id, true)}
+                                        onClick={() => handleDecision(row.id, true, "MOBILE")}
                                         disabled={submittingId === row.id}
                                         className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-400 transition hover:bg-emerald-500/20 disabled:opacity-50"
                                     >
-                                        <CheckCircle2 className="h-4 w-4" />
-                                        Approve
+                                        <MonitorSmartphone className="h-4 w-4" />
+                                        Approve Mobile
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleDecision(row.id, true, "COMPANY_PC")}
+                                        disabled={submittingId === row.id}
+                                        className="inline-flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-sm font-bold text-indigo-400 transition hover:bg-indigo-500/20 disabled:opacity-50"
+                                    >
+                                        <Laptop className="h-4 w-4" />
+                                        Approve Company PC
                                     </button>
 
                                     <button
@@ -222,9 +283,35 @@ export default function AdminDeviceEnrollmentRequestsPage() {
                                 </div>
                             </div>
 
+                            {(row.requestedPlatform || row.requestedBrowser || row.requestedIpAddress || row.requestReason) && (
+                                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                        <div className="text-xs uppercase tracking-widest text-slate-500">Platform</div>
+                                        <div className="mt-2 text-sm text-slate-300">{row.requestedPlatform || "--"}</div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                        <div className="text-xs uppercase tracking-widest text-slate-500">Browser</div>
+                                        <div className="mt-2 text-sm text-slate-300">{row.requestedBrowser || "--"}</div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                        <div className="text-xs uppercase tracking-widest text-slate-500">IP Address</div>
+                                        <div className="mt-2 text-sm text-slate-300">{row.requestedIpAddress || "--"}</div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                                        <div className="text-xs uppercase tracking-widest text-slate-500">Reason</div>
+                                        <div className="mt-2 text-sm text-slate-300">{row.requestReason || "--"}</div>
+                                    </div>
+                                </div>
+                            )}
+
                             {row.existingDeviceName && (
                                 <div className="mt-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4">
-                                    <div className="text-xs uppercase tracking-widest text-indigo-300">Current Active Device</div>
+                                    <div className="text-xs uppercase tracking-widest text-indigo-300">
+                                        Current Active Device
+                                    </div>
                                     <div className="mt-2 text-sm text-slate-200">
                                         {row.existingDeviceName}
                                     </div>

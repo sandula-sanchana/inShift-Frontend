@@ -2,7 +2,7 @@ import { getToken, onMessage, isSupported } from "firebase/messaging";
 import { messaging, vapidKey } from "./firebase";
 import { api } from "./api.js";
 
-const DEVICE_TOKEN_BASE = "/api/v1/emp/device-tokens";
+const DEVICE_TOKEN_BASE = "/v1/emp/device-tokens";
 export const LOCAL_FCM_TOKEN_KEY = "inshift_fcm_token";
 
 function canUseBrowserApis() {

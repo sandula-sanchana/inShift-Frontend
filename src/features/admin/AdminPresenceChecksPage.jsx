@@ -3,9 +3,9 @@ import { api } from "../../lib/api.js";
 import { Button } from "../../components/ui/Button.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/Card.jsx";
-import { Loader2, RefreshCw, ShieldCheck, Send } from "lucide-react";
+import { Loader2, RefreshCw, Send } from "lucide-react";
 
-const ADMIN_BASE = "/api/v1/admin/presence-check";
+const ADMIN_BASE = "/v1/admin/presence-check";
 const EMP_BASE = "/v1/admin/employees";
 
 function unwrapApiResponse(resData) {
@@ -37,7 +37,6 @@ export default function AdminPresenceChecksPage() {
     const [form, setForm] = useState({
         employeeId: "",
         triggerReason: "ADMIN_MANUAL",
-        riskLevel: "MEDIUM",
         sourceExpected: "ANY",
         triggerDescription: "",
         adminNote: "",
@@ -50,7 +49,7 @@ export default function AdminPresenceChecksPage() {
             const res = await api.get(EMP_BASE);
             const data = unwrapApiResponse(res.data) || [];
             setEmployees(Array.isArray(data) ? data : []);
-        } catch (e) {
+        } catch {
             setEmployees([]);
         } finally {
             setLoadingEmployees(false);
@@ -63,7 +62,7 @@ export default function AdminPresenceChecksPage() {
             const res = await api.get(`${ADMIN_BASE}/active`);
             const data = unwrapApiResponse(res.data) || [];
             setActiveChecks(Array.isArray(data) ? data : []);
-        } catch (e) {
+        } catch {
             setActiveChecks([]);
         } finally {
             setLoadingActive(false);
@@ -76,7 +75,7 @@ export default function AdminPresenceChecksPage() {
             const res = await api.get(`${ADMIN_BASE}/history`);
             const data = unwrapApiResponse(res.data) || [];
             setHistoryChecks(Array.isArray(data) ? data : []);
-        } catch (e) {
+        } catch {
             setHistoryChecks([]);
         } finally {
             setLoadingHistory(false);
@@ -122,7 +121,6 @@ export default function AdminPresenceChecksPage() {
             await api.post(`${ADMIN_BASE}/trigger`, {
                 employeeId: Number(form.employeeId),
                 triggerReason: form.triggerReason,
-                riskLevel: form.riskLevel,
                 sourceExpected: form.sourceExpected,
                 triggerDescription: form.triggerDescription || null,
                 adminNote: form.adminNote || null,
@@ -212,19 +210,6 @@ export default function AdminPresenceChecksPage() {
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm text-slate-300">Risk Level</label>
-                            <select
-                                value={form.riskLevel}
-                                onChange={(e) => updateField("riskLevel", e.target.value)}
-                                className="w-full rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3 text-white outline-none"
-                            >
-                                <option value="LOW">LOW</option>
-                                <option value="MEDIUM">MEDIUM</option>
-                                <option value="HIGH">HIGH</option>
-                            </select>
-                        </div>
-
-                        <div>
                             <label className="mb-2 block text-sm text-slate-300">Expected Source</label>
                             <select
                                 value={form.sourceExpected}
@@ -233,7 +218,7 @@ export default function AdminPresenceChecksPage() {
                             >
                                 <option value="ANY">ANY</option>
                                 <option value="COMPANY_PC">COMPANY_PC</option>
-                                <option value="MOBILE_GPS">MOBILE_GPS</option>
+                                <option value="MOBILE_BIOMETRIC">MOBILE_BIOMETRIC</option>
                             </select>
                         </div>
 
