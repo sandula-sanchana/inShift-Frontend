@@ -1,12 +1,27 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Fingerprint, Loader2 } from "lucide-react";
 import * as webauthnJson from "@github/webauthn-json";
 import { api } from "../../lib/api.js";
+
+const DEVICE_FP_KEY = "inshift_device_fingerprint";
 
 function getErrorMessage(err, fallback = "Passkey registration failed") {
     const msgFromBackend = err?.response?.data?.message || err?.response?.data?.msg;
     if (msgFromBackend) return msgFromBackend;
     return err?.message || fallback;
+}
+
+function getOrCreateDeviceFingerprint() {
+    let fp = localStorage.getItem(DEVICE_FP_KEY);
+    if (fp) return fp;
+
+    fp =
+        typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    localStorage.setItem(DEVICE_FP_KEY, fp);
+    return fp;
 }
 
 function guessDeviceName() {
@@ -26,6 +41,12 @@ function guessDeviceName() {
     return "My Device";
 }
 
+function detectRequestedTrustType() {
+    const ua = navigator.userAgent || "";
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    return isMobile ? "MOBILE" : "COMPANY_PC";
+}
+
 export default function Verify() {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState("");
@@ -41,9 +62,13 @@ export default function Verify() {
                 throw new Error("Device name is required");
             }
 
-            // 1) ask backend for registration options
+            const deviceFingerprint = getOrCreateDeviceFingerprint();
+            const requestedTrustType = detectRequestedTrustType();
+
             const res = await api.post("/v1/emp/passkey/register/options", {
                 deviceName: cleanDeviceName,
+                deviceFingerprint,
+                requestedTrustType,
             });
 
             const optionsJson = res?.data?.data;
@@ -52,20 +77,18 @@ export default function Verify() {
                 throw new Error("No registration options received from server");
             }
 
-            // 2) parse options JSON string
             const creationOptions = JSON.parse(optionsJson);
 
-            // 3) create passkey
             const credential = await webauthnJson.create(creationOptions);
 
             if (!credential) {
                 throw new Error("Credential creation failed");
             }
 
-            // 4) send credential back to backend
             const payload = {
                 credentialJson: JSON.stringify(credential),
                 deviceName: cleanDeviceName,
+                deviceFingerprint,
             };
 
             await api.post("/v1/emp/passkey/register/verify", payload);

@@ -22,7 +22,6 @@ export default function Verify() {
             setLoading(true);
             setStatus("");
 
-            // 1) get assertion options JSON string from backend
             const res = await api.post("/v1/emp/passkey/assertion/options");
             const optionsJson = res?.data?.data;
 
@@ -30,17 +29,14 @@ export default function Verify() {
                 throw new Error("No assertion options received from server");
             }
 
-            // 2) parse backend JSON string into object
             const requestOptions = JSON.parse(optionsJson);
 
-            // 3) ask browser/device to verify with passkey
             const credential = await webauthnJson.get(requestOptions);
 
             if (!credential) {
                 throw new Error("Passkey verification was cancelled or failed");
             }
 
-            // 4) send full assertion JSON to backend
             await api.post("/v1/emp/passkey/assertion/verify", {
                 credentialJson: JSON.stringify(credential),
             });
