@@ -194,11 +194,22 @@ export default function EmployeeDashboard() {
 
     useEffect(() => {
         const unsubscribe = listenForeground((payload) => {
+            const title = payload?.notification?.title || "InShift";
+            const message = payload?.notification?.body || "New notification received.";
+
+            console.log("FOREGROUND PUSH", payload);
+
             toast({
-                title: payload?.notification?.title || "InShift",
-                message: payload?.notification?.body || "New notification received.",
+                title,
+                message,
                 variant: "success",
             });
+
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(title, {
+                    body: message,
+                });
+            }
         });
 
         return () => {

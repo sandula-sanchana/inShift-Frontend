@@ -3,7 +3,6 @@
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
 
-
 firebase.initializeApp({
     apiKey: "AIzaSyBXgUWgOqXOgcfR28_AU5NdzdKSi6iOd7g",
     authDomain: "inshift-8b9f0.firebaseapp.com",
@@ -16,10 +15,17 @@ firebase.initializeApp({
 var messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function (payload) {
-    var title = (payload && payload.notification && payload.notification.title) ? payload.notification.title : "InShift";
-    var body  = (payload && payload.notification && payload.notification.body) ? payload.notification.body : "";
+    var title = (payload && payload.notification && payload.notification.title)
+        ? payload.notification.title
+        : "InShift";
 
-    var url = (payload && payload.data && payload.data.url) ? payload.data.url : "/app/notifications";
+    var body = (payload && payload.notification && payload.notification.body)
+        ? payload.notification.body
+        : "";
+
+    var url = (payload && payload.data && payload.data.url)
+        ? payload.data.url
+        : "/emp/notifications";
 
     self.registration.showNotification(title, {
         body: body,
@@ -29,9 +35,10 @@ messaging.onBackgroundMessage(function (payload) {
 
 self.addEventListener("notificationclick", function (event) {
     event.notification.close();
+
     var url = (event.notification && event.notification.data && event.notification.data.url)
         ? event.notification.data.url
-        : "/app/notifications";
+        : "/emp/notifications";
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
