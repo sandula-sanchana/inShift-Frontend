@@ -22,6 +22,7 @@ import {
     syncExistingNotificationToken
 } from "../../lib/notifications.js";
 import { useServiceWorkerNavigation } from "../../lib/useServiceWorkerNavigation.js";
+import { getOrCreateDeviceFingerprint } from "../../lib/deviceFingerprint.js";
 
 import Notifications from "../../features/employee/notification/Notifications.jsx";
 import Attendance from "../../features/employee/Attendance/Attendance.jsx";
@@ -30,21 +31,6 @@ import Shifts from "../../features/employee/shifts/Shifts.jsx";
 import Security from "../../features/employee/security.jsx";
 import Corrections from "../../features/employee/AttendanceCorrections.jsx";
 import PresenceCheck from "../../features/employee/PresenceCheck.jsx";
-
-const DEVICE_FP_KEY = "inshift_device_fingerprint";
-
-function getOrCreateDeviceFingerprint() {
-    let fp = localStorage.getItem(DEVICE_FP_KEY);
-    if (fp) return fp;
-
-    fp =
-        typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-    localStorage.setItem(DEVICE_FP_KEY, fp);
-    return fp;
-}
 
 function detectRequestedTrustType() {
     const ua = navigator.userAgent || "";
@@ -132,6 +118,17 @@ function DevicePendingApproval() {
     );
 }
 
+function DeviceRejectedNotice() {
+    return (
+        <div className="mx-auto max-w-xl rounded-3xl border border-rose-200 bg-rose-50 p-6">
+            <div className="text-lg font-bold text-rose-900">Device Not Approved</div>
+            <p className="mt-2 text-sm text-rose-800">
+                This device was rejected or revoked. Please contact your administrator or sign in from an approved device.
+            </p>
+        </div>
+    );
+}
+
 export default function EmployeeDashboard() {
     const navigate = useNavigate();
     const toast = useToast((s) => s.push);
@@ -170,9 +167,12 @@ export default function EmployeeDashboard() {
                 const enrollRes = await api.post("/v1/emp/device/enroll", enrollPayload);
                 const enrollData = enrollRes?.data?.data || null;
 
-                if (!ignore) setDeviceEnrollment(enrollData);
+                if (!ignore) {
+                    setDeviceEnrollment(enrollData);
+                }
             } catch (err) {
                 console.error("Dashboard bootstrap failed:", err);
+
                 if (!ignore) {
                     setMe(null);
                     setDeviceEnrollment(null);
@@ -208,7 +208,7 @@ export default function EmployeeDashboard() {
 
     useEffect(() => {
         if (!me || !deviceEnrollment) return;
-        if (deviceEnrollment?.approvalStatus !== "APPROVED") return;
+        if (deviceEnrollment.approvalStatus !== "APPROVED") return;
 
         syncExistingNotificationToken().catch((err) => {
             console.error("Notification token sync failed:", err);
@@ -225,7 +225,7 @@ export default function EmployeeDashboard() {
             { to: "/emp/verify", icon: Fingerprint, label: "Verify" },
             { to: "/emp/shifts", icon: CalendarDays, label: "My Shifts" },
             { to: "/emp/ot", icon: Clock3, label: "My OT" },
-            { to: "/emp/security", icon: ShieldCheck, label: "Security" }
+            { to: "/emp/security", icon: ShieldCheck, label: "Security" },
         ],
         []
     );
@@ -244,9 +244,12 @@ export default function EmployeeDashboard() {
         );
     }
 
-    const isPending = deviceEnrollment?.approvalStatus === "PENDING";
-    const isApproved = deviceEnrollment?.approvalStatus === "APPROVED";
+    const approvalStatus = deviceEnrollment?.approvalStatus;
     const approvedType = deviceEnrollment?.approvedTrustType;
+
+    const isPending = approvalStatus === "PENDING";
+    const isApproved = approvalStatus === "APPROVED";
+    const isRejected = approvalStatus === "REJECTED" || approvalStatus === "REVOKED";
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50">
@@ -274,7 +277,7 @@ export default function EmployeeDashboard() {
                         {deviceEnrollment && (
                             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs">
                                 <div className="font-semibold text-slate-900">
-                                    Device: {deviceEnrollment.approvalStatus}
+                                    Device: {approvalStatus || "UNKNOWN"}
                                 </div>
                                 <div className="text-slate-600">
                                     {approvedType || "Awaiting approval"}
@@ -303,6 +306,10 @@ export default function EmployeeDashboard() {
                     <div className="mt-8">
                         <DevicePendingApproval />
                     </div>
+                ) : isRejected ? (
+                    <div className="mt-8">
+                        <DeviceRejectedNotice />
+                    </div>
                 ) : (
                     <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr] lg:gap-8">
                         <aside className="h-fit rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
@@ -322,6 +329,18 @@ export default function EmployeeDashboard() {
                             {!isApproved && (
                                 <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                                     This device is not fully approved yet.
+                                </div>
+                            )}
+
+                            {isApproved && approvedType === "MOBILE" && (
+                                <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                                    This device is approved as a trusted mobile device. You can register and use passkey on this device.
+                                </div>
+                            )}
+
+                            {isApproved && approvedType === "COMPANY_PC" && (
+                                <div className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+                                    This device is approved as a trusted company PC. Presence confirmation can be completed directly from this terminal.
                                 </div>
                             )}
 

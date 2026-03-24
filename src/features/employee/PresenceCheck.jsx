@@ -5,22 +5,9 @@ import { Badge } from "../../components/ui/Badge.jsx";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/Card.jsx";
 import { Loader2, MapPin, ShieldCheck, Clock } from "lucide-react";
 import { useToast } from "../../components/ui/Toast.jsx";
+import { getOrCreateDeviceFingerprint } from "../../lib/deviceFingerprint.js";
 
 const BASE = "/v1/emp/presence-check";
-const DEVICE_FP_KEY = "inshift_device_fingerprint";
-
-function getOrCreateDeviceFingerprint() {
-    let fp = localStorage.getItem(DEVICE_FP_KEY);
-    if (fp) return fp;
-
-    fp =
-        typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-
-    localStorage.setItem(DEVICE_FP_KEY, fp);
-    return fp;
-}
 
 export default function PresenceCheck() {
     const toast = useToast((s) => s.push);
@@ -47,7 +34,10 @@ export default function PresenceCheck() {
     }, []);
 
     useEffect(() => {
-        if (!check?.dueAt) return;
+        if (!check?.dueAt) {
+            setRemaining(null);
+            return;
+        }
 
         const interval = setInterval(() => {
             const diff = new Date(check.dueAt).getTime() - new Date().getTime();
@@ -58,6 +48,8 @@ export default function PresenceCheck() {
     }, [check]);
 
     async function respondWithGPS() {
+        if (!check?.id) return;
+
         if (!navigator.geolocation) {
             toast({
                 title: "GPS not supported",
@@ -115,6 +107,8 @@ export default function PresenceCheck() {
     }
 
     async function respondLightConfirm() {
+        if (!check?.id) return;
+
         setResponding(true);
 
         try {
