@@ -207,13 +207,12 @@ export default function EmployeeDashboard() {
     }, [toast]);
 
     useEffect(() => {
-        if (!me || !deviceEnrollment) return;
-        if (deviceEnrollment.approvalStatus !== "APPROVED") return;
+        if (!me) return;
 
         syncExistingNotificationToken().catch((err) => {
             console.error("Notification token sync failed:", err);
         });
-    }, [me, deviceEnrollment]);
+    }, [me]);
 
     const nav = useMemo(
         () => [
@@ -351,7 +350,10 @@ export default function EmployeeDashboard() {
                                 <Route path="presence-check" element={<PresenceCheck />} />
                                 <Route path="corrections" element={<Corrections />} />
                                 <Route path="verify" element={<Verify />} />
-                                <Route path="shifts" element={<Shifts />} />
+                                <Route
+                                    path="shifts"
+                                    element={<Shifts />}
+                                />
                                 <Route
                                     path="ot"
                                     element={<div className="text-slate-900 font-semibold">My OT Page</div>}

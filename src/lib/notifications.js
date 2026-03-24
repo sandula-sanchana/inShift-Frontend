@@ -29,17 +29,12 @@ async function getActiveServiceWorkerRegistration() {
 }
 
 export function getDeviceType() {
-    if (!canUseBrowserApis()) return "WEB";
+    if (!canUseBrowserApis()) return "COMPANY_PC";
 
     const ua = navigator.userAgent || "";
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
 
-    if (/Android/i.test(ua)) return "ANDROID";
-    if (/iPhone|iPad|iPod/i.test(ua)) return "IOS";
-    if (/Windows/i.test(ua)) return "WINDOWS";
-    if (/Macintosh|Mac OS X/i.test(ua)) return "MAC";
-    if (/Linux/i.test(ua)) return "LINUX";
-
-    return "WEB";
+    return isMobile ? "MOBILE" : "COMPANY_PC";
 }
 
 export function getDeviceName() {
