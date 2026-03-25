@@ -31,6 +31,7 @@ import AttendanceIntelligencePage from "../../features/admin/AdminAttendanceInte
 import AdminDeviceEnrollmentRequestsPage from "../../features/admin/AdminDeviceEnrollmentRequestsPage.jsx";
 import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesPage.jsx";
 import AdminPresenceChecksPage from "../../features/admin/AdminPresenceChecksPage.jsx";
+import AdminPresenceAnalytics from "../../features/admin/AdminPresenceAnalytics.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -378,7 +379,7 @@ export default function AdminDashboard() {
                         <div>
                             <div className="text-xl font-black tracking-tighter text-white">InShift<span className="text-indigo-500">.</span></div>
                             <div className="flex items-center gap-2">
-                                <div clas   sName="h-1 w-1 rounded-full bg-indigo-500 animate-pulse" />
+                                <div className="h-1 w-1 rounded-full bg-indigo-500 animate-pulse" />
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Admin Portal</span>
                             </div>
                         </div>
@@ -454,6 +455,7 @@ export default function AdminDashboard() {
                                     <Route path="intelligence" element={<AttendanceIntelligencePage />} />
                                     <Route path="presence-checks" element={<AdminPresenceChecksPage />} />
                                     <Route path="attendance-rules" element={<AdminAttendanceRulesPage />} />
+                                    <Route path="presence-analytics" element={<AdminPresenceAnalytics />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />
                                     <Route

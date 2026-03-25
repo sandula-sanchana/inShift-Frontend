@@ -10,12 +10,19 @@ import {
     Siren,
     Filter,
     TrendingUp,
-    Flag
+    Flag,
+    Loader2,
+    Bot,
+    Clock3,
+    Monitor,
+    Smartphone,
+    Activity
 } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { cn } from "../../lib/cn";
 
 const INTEL_BASE = "/v1/admin/intelligence";
+const AI_BASE = "/v1/admin/ai-risk";
 
 function unwrapApiResponse(resData) {
     if (resData && typeof resData === "object" && "data" in resData) return resData.data;
@@ -54,6 +61,21 @@ function RiskBadge({ highRisk, requiresReview }) {
     );
 }
 
+function PriorityBadge({ value }) {
+    const tone =
+        value === "HIGH"
+            ? "bg-rose-500/10 text-rose-400 ring-rose-500/20"
+            : value === "MEDIUM"
+                ? "bg-amber-500/10 text-amber-400 ring-amber-500/20"
+                : "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20";
+
+    return (
+        <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1", tone)}>
+            {value || "LOW"}
+        </span>
+    );
+}
+
 function FlagPill({ type, severity, scoreImpact }) {
     const tone =
         severity === "CRITICAL" ? "bg-rose-500/10 text-rose-400 ring-rose-500/20" :
@@ -85,7 +107,7 @@ function ScoreBar({ trustScore }) {
                 <span>Trust Score</span>
                 <span>{safe}/100</span>
             </div>
-            <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+            <div className="h-2 overflow-hidden rounded-full bg-white/5">
                 <div className={cn("h-full rounded-full transition-all", tone)} style={{ width: `${safe}%` }} />
             </div>
         </div>
@@ -134,6 +156,124 @@ function InsightCard({ title, value, subtitle, icon: Icon }) {
     );
 }
 
+function MiniStatusBar({ label, value, max, tone }) {
+    const safeMax = Math.max(max || 1, 1);
+    const width = Math.min(100, Math.round(((value || 0) / safeMax) * 100));
+
+    return (
+        <div>
+            <div className="mb-1 flex items-center justify-between text-xs text-slate-400">
+                <span>{label}</span>
+                <span>{value || 0}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                <div className={cn("h-full rounded-full", tone)} style={{ width: `${width}%` }} />
+            </div>
+        </div>
+    );
+}
+
+function RiskTrendBars({ dates = [], scores = [] }) {
+    if (!dates.length || !scores.length) {
+        return (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                No recent daily risk scores available.
+            </div>
+        );
+    }
+
+    const max = Math.max(...scores, 1);
+
+    return (
+        <div className="space-y-3">
+            {scores.map((score, index) => {
+                const date = dates[index];
+                const width = Math.min(100, Math.round((score / max) * 100));
+                const tone =
+                    score >= 70 ? "bg-rose-500" :
+                        score >= 40 ? "bg-amber-500" :
+                            "bg-emerald-500";
+
+                return (
+                    <div key={`${date}-${score}-${index}`}>
+                        <div className="mb-1 flex items-center justify-between text-xs text-slate-400">
+                            <span>{date}</span>
+                            <span>{score}</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                            <div className={cn("h-full rounded-full", tone)} style={{ width: `${width}%` }} />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function PresenceTrendList({ rows = [] }) {
+    if (!rows.length) {
+        return (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                No recent presence trend available.
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-3">
+            {rows.map((item) => (
+                <div
+                    key={item.presenceCheckId}
+                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                >
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-white">
+                            Check #{item.presenceCheckId}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-white/5 text-slate-300 ring-1 ring-white/10">
+                                {item.status || "UNKNOWN"}
+                            </span>
+                            {item.responseSource && (
+                                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20">
+                                    {item.responseSource}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="mt-2 text-xs text-slate-500">
+                        {item.createdAt ? new Date(item.createdAt).toLocaleString() : "No date"}
+                    </div>
+
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-xl bg-white/[0.03] p-3">
+                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Trigger</div>
+                            <div className="mt-1 text-sm font-semibold text-white">{item.triggerReason || "—"}</div>
+                        </div>
+                        <div className="rounded-xl bg-white/[0.03] p-3">
+                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Risk</div>
+                            <div className="mt-1 text-sm font-semibold text-white">{item.riskLevel || "—"}</div>
+                        </div>
+                        <div className="rounded-xl bg-white/[0.03] p-3">
+                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Delay</div>
+                            <div className="mt-1 text-sm font-semibold text-white">
+                                {item.responseDelaySeconds != null ? `${item.responseDelaySeconds}s` : "—"}
+                            </div>
+                        </div>
+                        <div className="rounded-xl bg-white/[0.03] p-3">
+                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Flags</div>
+                            <div className="mt-1 text-sm font-semibold text-white">
+                                {item.missedResponse ? "Missed" : item.lateResponse ? "Late" : item.escalated ? "Escalated" : "Normal"}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export default function AttendanceIntelligencePage() {
     const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [loading, setLoading] = useState(false);
@@ -142,6 +282,11 @@ export default function AttendanceIntelligencePage() {
     const [rows, setRows] = useState([]);
     const [query, setQuery] = useState("");
     const [riskFilter, setRiskFilter] = useState("ALL");
+
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState(null);
+    const [aiData, setAiData] = useState(null);
 
     const loadData = async () => {
         setLoading(true);
@@ -156,6 +301,25 @@ export default function AttendanceIntelligencePage() {
             setError(getErrorMessage(e, "Failed to load intelligence data"));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadAiAnalysis = async (employeeId) => {
+        if (!employeeId) return;
+
+        setSelectedEmployeeId(employeeId);
+        setAiLoading(true);
+        setAiError(null);
+        setAiData(null);
+
+        try {
+            const res = await api.get(`/v1/admin/ai-risk/employee/${employeeId}`);
+            const data = unwrapApiResponse(res.data);
+            setAiData(data || null);
+        } catch (e) {
+            setAiError(getErrorMessage(e, "Failed to load AI risk analysis"));
+        } finally {
+            setAiLoading(false);
         }
     };
 
@@ -234,8 +398,22 @@ export default function AttendanceIntelligencePage() {
         };
     }, [rows]);
 
+    const analytics = aiData?.analytics || null;
+    const aiInsight = aiData?.aiInsight || null;
+
+    const maxStatusValue = useMemo(() => {
+        if (!analytics) return 1;
+        return Math.max(
+            analytics.respondedCount || 0,
+            analytics.lateCount || 0,
+            analytics.missedCount || 0,
+            analytics.escalatedCount || 0,
+            1
+        );
+    }, [analytics]);
+
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="animate-in slide-in-from-bottom-4 fade-in duration-700">
             <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <div className="flex items-center gap-2">
@@ -245,7 +423,7 @@ export default function AttendanceIntelligencePage() {
                         </h1>
                     </div>
                     <p className="mt-2 text-sm text-slate-400">
-                        Review risk scores, trust levels, and suspicious attendance patterns for each employee.
+                        Review risk scores, trust levels, suspicious attendance patterns, and AI copilot insights.
                     </p>
                 </div>
 
@@ -355,6 +533,14 @@ export default function AttendanceIntelligencePage() {
                                 <div className="mt-4">
                                     <ScoreBar trustScore={row.trustScore ?? 100} />
                                 </div>
+
+                                <button
+                                    onClick={() => loadAiAnalysis(row.employeeId)}
+                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm font-bold text-indigo-300 transition hover:bg-indigo-500/20"
+                                >
+                                    <Brain className="h-4 w-4" />
+                                    Analyze with AI
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -373,7 +559,7 @@ export default function AttendanceIntelligencePage() {
                                 type="date"
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-10 pr-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500/30"
+                                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-indigo-500/30"
                             />
                         </div>
                     </div>
@@ -388,7 +574,7 @@ export default function AttendanceIntelligencePage() {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Search employee, flag type, or message..."
-                                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-10 pr-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500/30"
+                                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500/30"
                             />
                         </div>
                     </div>
@@ -402,7 +588,7 @@ export default function AttendanceIntelligencePage() {
                             <select
                                 value={riskFilter}
                                 onChange={(e) => setRiskFilter(e.target.value)}
-                                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-10 pr-3 py-2.5 text-sm text-white outline-none focus:border-indigo-500/30"
+                                className="w-full rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none focus:border-indigo-500/30"
                             >
                                 <option value="ALL" className="text-slate-900">All</option>
                                 <option value="HIGH" className="text-slate-900">High Risk</option>
@@ -412,6 +598,238 @@ export default function AttendanceIntelligencePage() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <div className="mt-8 rounded-3xl border border-indigo-500/20 bg-indigo-500/[0.04] p-6 backdrop-blur-2xl">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <Bot className="h-5 w-5 text-indigo-300" />
+                            <div className="text-lg font-black text-white">AI Risk Copilot</div>
+                        </div>
+                        <div className="mt-1 text-sm text-slate-400">
+                            Select an employee from the list below to generate behavior analytics and AI guidance.
+                        </div>
+                    </div>
+
+                    {selectedEmployeeId && (
+                        <div className="text-xs uppercase tracking-widest text-slate-400">
+                            Selected Employee #{selectedEmployeeId}
+                        </div>
+                    )}
+                </div>
+
+                {!selectedEmployeeId && (
+                    <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                        No employee selected yet. Click <span className="font-semibold text-white">Analyze with AI</span> on any employee card below.
+                    </div>
+                )}
+
+                {aiLoading && (
+                    <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Generating AI risk analysis...
+                    </div>
+                )}
+
+                {aiError && (
+                    <div className="mt-5 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 text-sm text-rose-400">
+                        {aiError}
+                    </div>
+                )}
+
+                {aiData && !aiLoading && (
+                    <div className="mt-6 space-y-6">
+                        {aiInsight && (
+                            <>
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                                AI Summary
+                                            </div>
+                                            <div className="mt-2 text-base font-semibold text-white">
+                                                {aiInsight.summary}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <PriorityBadge value={aiInsight.monitoringPriority} />
+                                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-white/5 text-slate-300 ring-1 ring-white/10">
+                                                {aiInsight.model || "AI"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 xl:grid-cols-2">
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                            Key Patterns
+                                        </div>
+                                        <div className="mt-4 space-y-2">
+                                            {(aiInsight.keyPatterns || []).length === 0 ? (
+                                                <div className="text-sm text-slate-400">No patterns returned.</div>
+                                            ) : (
+                                                aiInsight.keyPatterns.map((item, idx) => (
+                                                    <div
+                                                        key={`${item}-${idx}`}
+                                                        className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300"
+                                                    >
+                                                        {item}
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                            Recommended Actions
+                                        </div>
+                                        <div className="mt-4 space-y-2">
+                                            {(aiInsight.recommendedActions || []).length === 0 ? (
+                                                <div className="text-sm text-slate-400">No recommendations returned.</div>
+                                            ) : (
+                                                aiInsight.recommendedActions.map((item, idx) => (
+                                                    <div
+                                                        key={`${item}-${idx}`}
+                                                        className="rounded-xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm text-indigo-200"
+                                                    >
+                                                        {item}
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {analytics && (
+                            <>
+                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                    <InsightCard
+                                        title="Current Risk Score"
+                                        value={analytics.currentRiskScore ?? 0}
+                                        subtitle={`Trust ${analytics.currentTrustScore ?? 0} • ${analytics.currentRiskLevel || "LOW"}`}
+                                        icon={TrendingUp}
+                                    />
+                                    <InsightCard
+                                        title="Presence Checks"
+                                        value={analytics.totalPresenceChecks ?? 0}
+                                        subtitle={`${analytics.respondedCount ?? 0} responded`}
+                                        icon={ShieldCheck}
+                                    />
+                                    <InsightCard
+                                        title="Late / Missed"
+                                        value={`${analytics.lateCount ?? 0} / ${analytics.missedCount ?? 0}`}
+                                        subtitle={`${analytics.escalatedCount ?? 0} escalated`}
+                                        icon={AlertTriangle}
+                                    />
+                                    <InsightCard
+                                        title="Avg Delay"
+                                        value={`${analytics.averageResponseDelaySeconds ?? 0}s`}
+                                        subtitle={`Max ${analytics.maxResponseDelaySeconds ?? 0}s`}
+                                        icon={Clock3}
+                                    />
+                                </div>
+
+                                <div className="grid gap-4 xl:grid-cols-3">
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                            <Activity className="h-4 w-4" />
+                                            Presence Status Distribution
+                                        </div>
+                                        <div className="space-y-3">
+                                            <MiniStatusBar
+                                                label="Responded"
+                                                value={analytics.respondedCount}
+                                                max={maxStatusValue}
+                                                tone="bg-emerald-500"
+                                            />
+                                            <MiniStatusBar
+                                                label="Late"
+                                                value={analytics.lateCount}
+                                                max={maxStatusValue}
+                                                tone="bg-amber-500"
+                                            />
+                                            <MiniStatusBar
+                                                label="Missed"
+                                                value={analytics.missedCount}
+                                                max={maxStatusValue}
+                                                tone="bg-rose-500"
+                                            />
+                                            <MiniStatusBar
+                                                label="Escalated"
+                                                value={analytics.escalatedCount}
+                                                max={maxStatusValue}
+                                                tone="bg-indigo-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                            <Monitor className="h-4 w-4" />
+                                            Response Source Split
+                                        </div>
+                                        <div className="space-y-3">
+                                            <MiniStatusBar
+                                                label="Company PC"
+                                                value={analytics.companyPcResponses}
+                                                max={Math.max(analytics.companyPcResponses || 0, analytics.mobileResponses || 0, 1)}
+                                                tone="bg-indigo-500"
+                                            />
+                                            <MiniStatusBar
+                                                label="Mobile"
+                                                value={analytics.mobileResponses}
+                                                max={Math.max(analytics.companyPcResponses || 0, analytics.mobileResponses || 0, 1)}
+                                                tone="bg-emerald-500"
+                                            />
+                                        </div>
+
+                                        <div className="mt-4 grid grid-cols-2 gap-3">
+                                            <div className="rounded-xl bg-white/[0.03] p-3">
+                                                <div className="text-[11px] uppercase tracking-widest text-slate-500">Company PC</div>
+                                                <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
+                                                    <Monitor className="h-4 w-4 text-indigo-300" />
+                                                    {analytics.companyPcResponses ?? 0}
+                                                </div>
+                                            </div>
+                                            <div className="rounded-xl bg-white/[0.03] p-3">
+                                                <div className="text-[11px] uppercase tracking-widest text-slate-500">Mobile</div>
+                                                <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
+                                                    <Smartphone className="h-4 w-4 text-emerald-300" />
+                                                    {analytics.mobileResponses ?? 0}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                            <TrendingUp className="h-4 w-4" />
+                                            Daily Risk Trend
+                                        </div>
+                                        <RiskTrendBars
+                                            dates={analytics.recentDailyRiskDates || []}
+                                            scores={analytics.recentDailyRiskScores || []}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                        <Clock3 className="h-4 w-4" />
+                                        Recent Presence Trend
+                                    </div>
+                                    <PresenceTrendList rows={analytics.recentPresenceTrend || []} />
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="mt-8 space-y-4">
@@ -466,6 +884,14 @@ export default function AttendanceIntelligencePage() {
                                             <div className="mt-1 text-xl font-black text-white">{row.totalFlags ?? 0}</div>
                                         </div>
                                     </div>
+
+                                    <button
+                                        onClick={() => loadAiAnalysis(row.employeeId)}
+                                        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm font-bold text-indigo-300 transition hover:bg-indigo-500/20"
+                                    >
+                                        <Brain className="h-4 w-4" />
+                                        Analyze with AI
+                                    </button>
                                 </div>
 
                                 <div className="space-y-3">
