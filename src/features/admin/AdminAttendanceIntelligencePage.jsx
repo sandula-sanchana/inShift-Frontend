@@ -18,11 +18,27 @@ import {
     Smartphone,
     Activity
 } from "lucide-react";
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    PieChart,
+    Pie,
+    Cell,
+    BarChart,
+    Bar
+} from "recharts";
 import { api } from "../../lib/api.js";
 import { cn } from "../../lib/cn";
 
 const INTEL_BASE = "/v1/admin/intelligence";
 const AI_BASE = "/v1/admin/ai-risk";
+const ANALYTICS_BASE = "/v1/admin/presence-analytics";
 
 function unwrapApiResponse(resData) {
     if (resData && typeof resData === "object" && "data" in resData) return resData.data;
@@ -95,7 +111,6 @@ function FlagPill({ type, severity, scoreImpact }) {
 
 function ScoreBar({ trustScore }) {
     const safe = Math.max(0, Math.min(100, trustScore ?? 0));
-
     const tone =
         safe < 40 ? "bg-rose-500" :
             safe < 60 ? "bg-amber-500" :
@@ -156,120 +171,24 @@ function InsightCard({ title, value, subtitle, icon: Icon }) {
     );
 }
 
-function MiniStatusBar({ label, value, max, tone }) {
-    const safeMax = Math.max(max || 1, 1);
-    const width = Math.min(100, Math.round(((value || 0) / safeMax) * 100));
-
+function ChartCard({ title, subtitle, children }) {
     return (
-        <div>
-            <div className="mb-1 flex items-center justify-between text-xs text-slate-400">
-                <span>{label}</span>
-                <span>{value || 0}</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                <div className={cn("h-full rounded-full", tone)} style={{ width: `${width}%` }} />
-            </div>
-        </div>
-    );
-}
-
-function RiskTrendBars({ dates = [], scores = [] }) {
-    if (!dates.length || !scores.length) {
-        return (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
-                No recent daily risk scores available.
-            </div>
-        );
-    }
-
-    const max = Math.max(...scores, 1);
-
-    return (
-        <div className="space-y-3">
-            {scores.map((score, index) => {
-                const date = dates[index];
-                const width = Math.min(100, Math.round((score / max) * 100));
-                const tone =
-                    score >= 70 ? "bg-rose-500" :
-                        score >= 40 ? "bg-amber-500" :
-                            "bg-emerald-500";
-
-                return (
-                    <div key={`${date}-${score}-${index}`}>
-                        <div className="mb-1 flex items-center justify-between text-xs text-slate-400">
-                            <span>{date}</span>
-                            <span>{score}</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                            <div className={cn("h-full rounded-full", tone)} style={{ width: `${width}%` }} />
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-function PresenceTrendList({ rows = [] }) {
-    if (!rows.length) {
-        return (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
-                No recent presence trend available.
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-3">
-            {rows.map((item) => (
-                <div
-                    key={item.presenceCheckId}
-                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-                >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="text-sm font-semibold text-white">
-                            Check #{item.presenceCheckId}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-white/5 text-slate-300 ring-1 ring-white/10">
-                                {item.status || "UNKNOWN"}
-                            </span>
-                            {item.responseSource && (
-                                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20">
-                                    {item.responseSource}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="mt-2 text-xs text-slate-500">
-                        {item.createdAt ? new Date(item.createdAt).toLocaleString() : "No date"}
-                    </div>
-
-                    <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <div className="rounded-xl bg-white/[0.03] p-3">
-                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Trigger</div>
-                            <div className="mt-1 text-sm font-semibold text-white">{item.triggerReason || "—"}</div>
-                        </div>
-                        <div className="rounded-xl bg-white/[0.03] p-3">
-                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Risk</div>
-                            <div className="mt-1 text-sm font-semibold text-white">{item.riskLevel || "—"}</div>
-                        </div>
-                        <div className="rounded-xl bg-white/[0.03] p-3">
-                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Delay</div>
-                            <div className="mt-1 text-sm font-semibold text-white">
-                                {item.responseDelaySeconds != null ? `${item.responseDelaySeconds}s` : "—"}
-                            </div>
-                        </div>
-                        <div className="rounded-xl bg-white/[0.03] p-3">
-                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Flags</div>
-                            <div className="mt-1 text-sm font-semibold text-white">
-                                {item.missedResponse ? "Missed" : item.lateResponse ? "Late" : item.escalated ? "Escalated" : "Normal"}
-                            </div>
-                        </div>
-                    </div>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl">
+            <div>
+                <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                    {title}
                 </div>
-            ))}
+                {subtitle && <div className="mt-1 text-sm text-slate-400">{subtitle}</div>}
+            </div>
+            <div className="mt-5 h-[300px]">{children}</div>
+        </div>
+    );
+}
+
+function EmptyState({ text = "No data available." }) {
+    return (
+        <div className="grid h-full place-items-center rounded-2xl border border-white/10 bg-white/[0.03] text-sm text-slate-400">
+            {text}
         </div>
     );
 }
@@ -284,17 +203,20 @@ export default function AttendanceIntelligencePage() {
     const [riskFilter, setRiskFilter] = useState("ALL");
 
     const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState(null);
     const [aiData, setAiData] = useState(null);
+
+    const [analyticsLoading, setAnalyticsLoading] = useState(false);
+    const [analyticsError, setAnalyticsError] = useState(null);
+    const [analyticsData, setAnalyticsData] = useState(null);
 
     const loadData = async () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get(`${INTEL_BASE}/daily`, {
-                params: { date }
-            });
+            const res = await api.get(`${INTEL_BASE}/daily`, { params: { date } });
             const data = unwrapApiResponse(res.data);
             setRows(Array.isArray(data) ? data : []);
         } catch (e) {
@@ -313,7 +235,7 @@ export default function AttendanceIntelligencePage() {
         setAiData(null);
 
         try {
-            const res = await api.get(`/v1/admin/ai-risk/employee/${employeeId}`);
+            const res = await api.get(`${AI_BASE}/employee/${employeeId}`);
             const data = unwrapApiResponse(res.data);
             setAiData(data || null);
         } catch (e) {
@@ -321,6 +243,32 @@ export default function AttendanceIntelligencePage() {
         } finally {
             setAiLoading(false);
         }
+    };
+
+    const loadPresenceAnalytics = async (employeeId) => {
+        if (!employeeId) return;
+
+        setAnalyticsLoading(true);
+        setAnalyticsError(null);
+        setAnalyticsData(null);
+
+        try {
+            const res = await api.get(`${ANALYTICS_BASE}/employee/${employeeId}`);
+            const data = unwrapApiResponse(res.data);
+            setAnalyticsData(data || null);
+        } catch (e) {
+            setAnalyticsError(getErrorMessage(e, "Failed to load presence analytics"));
+        } finally {
+            setAnalyticsLoading(false);
+        }
+    };
+
+    const analyzeEmployee = async (employeeId) => {
+        if (!employeeId) return;
+        await Promise.all([
+            loadAiAnalysis(employeeId),
+            loadPresenceAnalytics(employeeId)
+        ]);
     };
 
     useEffect(() => {
@@ -357,7 +305,6 @@ export default function AttendanceIntelligencePage() {
         const high = rows.filter(r => r.highRisk).length;
         const review = rows.filter(r => !r.highRisk && r.requiresReview).length;
         const stable = rows.filter(r => !r.highRisk && !r.requiresReview).length;
-
         return { total, high, review, stable };
     }, [rows]);
 
@@ -370,9 +317,6 @@ export default function AttendanceIntelligencePage() {
 
         const sortedByRisk = [...rows].sort((a, b) => (b.riskScore ?? 0) - (a.riskScore ?? 0));
         const highestRiskEmployee = sortedByRisk[0] || null;
-
-        const sortedByFlags = [...rows].sort((a, b) => (b.totalFlags ?? 0) - (a.totalFlags ?? 0));
-        const mostFlaggedEmployee = sortedByFlags[0] || null;
 
         const flagCounts = {};
         rows.forEach((row) => {
@@ -390,7 +334,6 @@ export default function AttendanceIntelligencePage() {
         return {
             averageTrust,
             highestRiskEmployee,
-            mostFlaggedEmployee,
             mostCommonFlag: mostCommonFlagEntry
                 ? { type: mostCommonFlagEntry[0], count: mostCommonFlagEntry[1] }
                 : null,
@@ -398,19 +341,55 @@ export default function AttendanceIntelligencePage() {
         };
     }, [rows]);
 
-    const analytics = aiData?.analytics || null;
     const aiInsight = aiData?.aiInsight || null;
+    const analytics = analyticsData || null;
 
-    const maxStatusValue = useMemo(() => {
-        if (!analytics) return 1;
-        return Math.max(
-            analytics.respondedCount || 0,
-            analytics.lateCount || 0,
-            analytics.missedCount || 0,
-            analytics.escalatedCount || 0,
-            1
-        );
+    const riskTrendData = useMemo(() => {
+        if (!analytics?.riskTrendDates?.length || !analytics?.riskTrendScores?.length) return [];
+        return analytics.riskTrendDates.map((dateValue, index) => ({
+            date: dateValue,
+            score: analytics.riskTrendScores[index] ?? 0
+        }));
     }, [analytics]);
+
+    const statusChartData = useMemo(() => {
+        if (!analytics) return [];
+        return [
+            { name: "Responded", value: analytics.respondedCount ?? 0 },
+            { name: "Late", value: analytics.lateCount ?? 0 },
+            { name: "Missed", value: analytics.missedCount ?? 0 },
+            { name: "Escalated", value: analytics.escalatedCount ?? 0 }
+        ];
+    }, [analytics]);
+
+    const sourceChartData = useMemo(() => {
+        if (!analytics) return [];
+        return [
+            { name: "Company PC", value: analytics.companyPcResponses ?? 0 },
+            { name: "Mobile", value: analytics.mobileResponses ?? 0 }
+        ];
+    }, [analytics]);
+
+    const delayChartData = useMemo(() => {
+        if (!analytics) return [];
+        return [
+            { name: "Avg Delay", seconds: analytics.averageResponseDelaySeconds ?? 0 },
+            { name: "Max Delay", seconds: analytics.maxResponseDelaySeconds ?? 0 },
+            { name: "Min Delay", seconds: analytics.minResponseDelaySeconds ?? 0 }
+        ];
+    }, [analytics]);
+
+    const responseDelayTrend = useMemo(() => {
+        if (!analytics?.delayTrend?.length) return [];
+        return analytics.delayTrend.map((item) => ({
+            createdAt: new Date(item.createdAt).toLocaleDateString(),
+            delay: item.responseDelaySeconds ?? 0,
+            status: item.status
+        }));
+    }, [analytics]);
+
+    const pieColors1 = ["#22c55e", "#f59e0b", "#ef4444", "#6366f1"];
+    const pieColors2 = ["#6366f1", "#10b981"];
 
     return (
         <div className="animate-in slide-in-from-bottom-4 fade-in duration-700">
@@ -423,7 +402,7 @@ export default function AttendanceIntelligencePage() {
                         </h1>
                     </div>
                     <p className="mt-2 text-sm text-slate-400">
-                        Review risk scores, trust levels, suspicious attendance patterns, and AI copilot insights.
+                        Review risk scores, trust levels, suspicious attendance patterns, AI insights, and presence behavior trends.
                     </p>
                 </div>
 
@@ -535,7 +514,7 @@ export default function AttendanceIntelligencePage() {
                                 </div>
 
                                 <button
-                                    onClick={() => loadAiAnalysis(row.employeeId)}
+                                    onClick={() => analyzeEmployee(row.employeeId)}
                                     className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm font-bold text-indigo-300 transition hover:bg-indigo-500/20"
                                 >
                                     <Brain className="h-4 w-4" />
@@ -608,7 +587,7 @@ export default function AttendanceIntelligencePage() {
                             <div className="text-lg font-black text-white">AI Risk Copilot</div>
                         </div>
                         <div className="mt-1 text-sm text-slate-400">
-                            Select an employee from the list below to generate behavior analytics and AI guidance.
+                            Use the employee cards below to generate AI guidance and full presence behavior analytics.
                         </div>
                     </div>
 
@@ -625,10 +604,10 @@ export default function AttendanceIntelligencePage() {
                     </div>
                 )}
 
-                {aiLoading && (
+                {(aiLoading || analyticsLoading) && (
                     <div className="mt-5 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Generating AI risk analysis...
+                        Loading intelligence analysis...
                     </div>
                 )}
 
@@ -638,7 +617,13 @@ export default function AttendanceIntelligencePage() {
                     </div>
                 )}
 
-                {aiData && !aiLoading && (
+                {analyticsError && (
+                    <div className="mt-5 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 text-sm text-rose-400">
+                        {analyticsError}
+                    </div>
+                )}
+
+                {selectedEmployeeId && !aiLoading && !analyticsLoading && (
                     <div className="mt-6 space-y-6">
                         {aiInsight && (
                             <>
@@ -710,16 +695,16 @@ export default function AttendanceIntelligencePage() {
                             <>
                                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                                     <InsightCard
-                                        title="Current Risk Score"
-                                        value={analytics.currentRiskScore ?? 0}
-                                        subtitle={`Trust ${analytics.currentTrustScore ?? 0} • ${analytics.currentRiskLevel || "LOW"}`}
-                                        icon={TrendingUp}
+                                        title="Employee"
+                                        value={analytics.employeeName || "—"}
+                                        subtitle={`#${analytics.employeeId}`}
+                                        icon={ShieldCheck}
                                     />
                                     <InsightCard
                                         title="Presence Checks"
                                         value={analytics.totalPresenceChecks ?? 0}
                                         subtitle={`${analytics.respondedCount ?? 0} responded`}
-                                        icon={ShieldCheck}
+                                        icon={Activity}
                                     />
                                     <InsightCard
                                         title="Late / Missed"
@@ -735,96 +720,276 @@ export default function AttendanceIntelligencePage() {
                                     />
                                 </div>
 
-                                <div className="grid gap-4 xl:grid-cols-3">
-                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                                        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                                            <Activity className="h-4 w-4" />
-                                            Presence Status Distribution
-                                        </div>
-                                        <div className="space-y-3">
-                                            <MiniStatusBar
-                                                label="Responded"
-                                                value={analytics.respondedCount}
-                                                max={maxStatusValue}
-                                                tone="bg-emerald-500"
-                                            />
-                                            <MiniStatusBar
-                                                label="Late"
-                                                value={analytics.lateCount}
-                                                max={maxStatusValue}
-                                                tone="bg-amber-500"
-                                            />
-                                            <MiniStatusBar
-                                                label="Missed"
-                                                value={analytics.missedCount}
-                                                max={maxStatusValue}
-                                                tone="bg-rose-500"
-                                            />
-                                            <MiniStatusBar
-                                                label="Escalated"
-                                                value={analytics.escalatedCount}
-                                                max={maxStatusValue}
-                                                tone="bg-indigo-500"
-                                            />
-                                        </div>
+                                <div className="grid gap-6 xl:grid-cols-2">
+                                    <ChartCard
+                                        title="Risk Score Trend"
+                                        subtitle="Daily attendance risk score history"
+                                    >
+                                        {riskTrendData.length === 0 ? (
+                                            <EmptyState text="No risk trend data available." />
+                                        ) : (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={riskTrendData}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                                    <XAxis dataKey="date" stroke="#94a3b8" />
+                                                    <YAxis stroke="#94a3b8" />
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            background: "#0f172a",
+                                                            border: "1px solid rgba(255,255,255,0.1)",
+                                                            borderRadius: "12px",
+                                                            color: "#fff"
+                                                        }}
+                                                    />
+                                                    <Legend />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="score"
+                                                        name="Risk Score"
+                                                        stroke="#6366f1"
+                                                        strokeWidth={3}
+                                                        dot={{ r: 4 }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </ChartCard>
+
+                                    <ChartCard
+                                        title="Response Delay Trend"
+                                        subtitle="Response speed across recent presence checks"
+                                    >
+                                        {responseDelayTrend.length === 0 ? (
+                                            <EmptyState text="No response delay trend available." />
+                                        ) : (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={responseDelayTrend}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                                    <XAxis dataKey="createdAt" stroke="#94a3b8" />
+                                                    <YAxis stroke="#94a3b8" />
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            background: "#0f172a",
+                                                            border: "1px solid rgba(255,255,255,0.1)",
+                                                            borderRadius: "12px",
+                                                            color: "#fff"
+                                                        }}
+                                                    />
+                                                    <Legend />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="delay"
+                                                        name="Delay (s)"
+                                                        stroke="#f43f5e"
+                                                        strokeWidth={3}
+                                                        dot={{ r: 4 }}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </ChartCard>
+                                </div>
+
+                                <div className="grid gap-6 xl:grid-cols-3">
+                                    <ChartCard
+                                        title="Status Distribution"
+                                        subtitle="Responded vs delayed vs missed"
+                                    >
+                                        {statusChartData.every((x) => !x.value) ? (
+                                            <EmptyState text="No status distribution available." />
+                                        ) : (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={statusChartData}
+                                                        dataKey="value"
+                                                        nameKey="name"
+                                                        innerRadius={65}
+                                                        outerRadius={100}
+                                                        paddingAngle={3}
+                                                    >
+                                                        {statusChartData.map((entry, index) => (
+                                                            <Cell key={entry.name} fill={pieColors1[index % pieColors1.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            background: "#0f172a",
+                                                            border: "1px solid rgba(255,255,255,0.1)",
+                                                            borderRadius: "12px",
+                                                            color: "#fff"
+                                                        }}
+                                                    />
+                                                    <Legend />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </ChartCard>
+
+                                    <ChartCard
+                                        title="Response Source Usage"
+                                        subtitle="Trusted company PC vs mobile responses"
+                                    >
+                                        {sourceChartData.every((x) => !x.value) ? (
+                                            <EmptyState text="No response source data available." />
+                                        ) : (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={sourceChartData}
+                                                        dataKey="value"
+                                                        nameKey="name"
+                                                        innerRadius={65}
+                                                        outerRadius={100}
+                                                        paddingAngle={3}
+                                                    >
+                                                        {sourceChartData.map((entry, index) => (
+                                                            <Cell key={entry.name} fill={pieColors2[index % pieColors2.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            background: "#0f172a",
+                                                            border: "1px solid rgba(255,255,255,0.1)",
+                                                            borderRadius: "12px",
+                                                            color: "#fff"
+                                                        }}
+                                                    />
+                                                    <Legend />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </ChartCard>
+
+                                    <ChartCard
+                                        title="Delay Summary"
+                                        subtitle="Average, max, and min response delay"
+                                    >
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <BarChart data={delayChartData}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                                <XAxis dataKey="name" stroke="#94a3b8" />
+                                                <YAxis stroke="#94a3b8" />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        background: "#0f172a",
+                                                        border: "1px solid rgba(255,255,255,0.1)",
+                                                        borderRadius: "12px",
+                                                        color: "#fff"
+                                                    }}
+                                                />
+                                                <Legend />
+                                                <Bar dataKey="seconds" name="Seconds" fill="#8b5cf6" radius={[8, 8, 0, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </ChartCard>
+                                </div>
+
+                                <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl">
+                                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+                                        Recent Presence Timeline
                                     </div>
 
-                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                                        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                                            <Monitor className="h-4 w-4" />
-                                            Response Source Split
-                                        </div>
-                                        <div className="space-y-3">
-                                            <MiniStatusBar
-                                                label="Company PC"
-                                                value={analytics.companyPcResponses}
-                                                max={Math.max(analytics.companyPcResponses || 0, analytics.mobileResponses || 0, 1)}
-                                                tone="bg-indigo-500"
-                                            />
-                                            <MiniStatusBar
-                                                label="Mobile"
-                                                value={analytics.mobileResponses}
-                                                max={Math.max(analytics.companyPcResponses || 0, analytics.mobileResponses || 0, 1)}
-                                                tone="bg-emerald-500"
-                                            />
-                                        </div>
-
-                                        <div className="mt-4 grid grid-cols-2 gap-3">
-                                            <div className="rounded-xl bg-white/[0.03] p-3">
-                                                <div className="text-[11px] uppercase tracking-widest text-slate-500">Company PC</div>
-                                                <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
-                                                    <Monitor className="h-4 w-4 text-indigo-300" />
-                                                    {analytics.companyPcResponses ?? 0}
-                                                </div>
+                                    <div className="mt-5 space-y-3">
+                                        {!analytics.recentPresenceChecks?.length ? (
+                                            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-400">
+                                                No recent presence checks available.
                                             </div>
-                                            <div className="rounded-xl bg-white/[0.03] p-3">
-                                                <div className="text-[11px] uppercase tracking-widest text-slate-500">Mobile</div>
-                                                <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-white">
-                                                    <Smartphone className="h-4 w-4 text-emerald-300" />
-                                                    {analytics.mobileResponses ?? 0}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        ) : (
+                                            analytics.recentPresenceChecks.map((item) => (
+                                                <div
+                                                    key={item.presenceCheckId}
+                                                    className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+                                                >
+                                                    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                                                        <div>
+                                                            <div className="text-sm font-bold text-white">
+                                                                Check #{item.presenceCheckId}
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-slate-500">
+                                                                Created: {item.createdAt ? new Date(item.createdAt).toLocaleString() : "—"}
+                                                            </div>
+                                                        </div>
 
-                                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                                        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                                            <TrendingUp className="h-4 w-4" />
-                                            Daily Risk Trend
-                                        </div>
-                                        <RiskTrendBars
-                                            dates={analytics.recentDailyRiskDates || []}
-                                            scores={analytics.recentDailyRiskScores || []}
-                                        />
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-white/5 text-slate-300 ring-1 ring-white/10">
+                                                                {item.status || "UNKNOWN"}
+                                                            </span>
+                                                            {item.responseSource && (
+                                                                <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-300 ring-1 ring-indigo-500/20">
+                                                                    {item.responseSource}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                                        <div className="rounded-xl bg-white/[0.03] p-3">
+                                                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Trigger</div>
+                                                            <div className="mt-1 text-sm font-semibold text-white">
+                                                                {item.triggerReason || "—"}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="rounded-xl bg-white/[0.03] p-3">
+                                                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Risk</div>
+                                                            <div className="mt-1 text-sm font-semibold text-white">
+                                                                {item.riskLevel || "—"}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="rounded-xl bg-white/[0.03] p-3">
+                                                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Delay</div>
+                                                            <div className="mt-1 text-sm font-semibold text-white">
+                                                                {item.responseDelaySeconds != null ? `${item.responseDelaySeconds}s` : "—"}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="rounded-xl bg-white/[0.03] p-3">
+                                                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Late</div>
+                                                            <div className="mt-1 text-sm font-semibold text-white">
+                                                                {item.lateResponse ? "Yes" : "No"}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="rounded-xl bg-white/[0.03] p-3">
+                                                            <div className="text-[11px] uppercase tracking-widest text-slate-500">Escalated</div>
+                                                            <div className="mt-1 text-sm font-semibold text-white">
+                                                                {item.escalated ? "Yes" : "No"}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
 
-                                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-slate-500">
-                                        <Clock3 className="h-4 w-4" />
-                                        Recent Presence Trend
-                                    </div>
-                                    <PresenceTrendList rows={analytics.recentPresenceTrend || []} />
+                                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                    <InsightCard
+                                        title="Company PC Responses"
+                                        value={analytics.companyPcResponses ?? 0}
+                                        subtitle="Trusted terminal confirmations"
+                                        icon={Monitor}
+                                    />
+                                    <InsightCard
+                                        title="Mobile Responses"
+                                        value={analytics.mobileResponses ?? 0}
+                                        subtitle="GPS mobile confirmations"
+                                        icon={Smartphone}
+                                    />
+                                    <InsightCard
+                                        title="Max Delay"
+                                        value={`${analytics.maxResponseDelaySeconds ?? 0}s`}
+                                        subtitle="Slowest response"
+                                        icon={Clock3}
+                                    />
+                                    <InsightCard
+                                        title="Min Delay"
+                                        value={`${analytics.minResponseDelaySeconds ?? 0}s`}
+                                        subtitle="Fastest response"
+                                        icon={TrendingUp}
+                                    />
                                 </div>
                             </>
                         )}
@@ -886,7 +1051,7 @@ export default function AttendanceIntelligencePage() {
                                     </div>
 
                                     <button
-                                        onClick={() => loadAiAnalysis(row.employeeId)}
+                                        onClick={() => analyzeEmployee(row.employeeId)}
                                         className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 px-4 py-3 text-sm font-bold text-indigo-300 transition hover:bg-indigo-500/20"
                                     >
                                         <Brain className="h-4 w-4" />

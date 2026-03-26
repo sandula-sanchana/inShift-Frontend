@@ -31,7 +31,6 @@ import AttendanceIntelligencePage from "../../features/admin/AdminAttendanceInte
 import AdminDeviceEnrollmentRequestsPage from "../../features/admin/AdminDeviceEnrollmentRequestsPage.jsx";
 import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesPage.jsx";
 import AdminPresenceChecksPage from "../../features/admin/AdminPresenceChecksPage.jsx";
-import AdminPresenceAnalytics from "../../features/admin/AdminPresenceAnalytics.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -455,7 +454,6 @@ export default function AdminDashboard() {
                                     <Route path="intelligence" element={<AttendanceIntelligencePage />} />
                                     <Route path="presence-checks" element={<AdminPresenceChecksPage />} />
                                     <Route path="attendance-rules" element={<AdminAttendanceRulesPage />} />
-                                    <Route path="presence-analytics" element={<AdminPresenceAnalytics />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />
                                     <Route
