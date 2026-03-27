@@ -66,8 +66,13 @@ self.addEventListener("notificationclick", function (event) {
             for (var i = 0; i < clientList.length; i++) {
                 var client = clientList[i];
 
-                // only reuse tabs that belong to this app origin
                 if (client && "url" in client && client.url && client.url.indexOf(self.location.origin) === 0) {
+                    if ("navigate" in client) {
+                        return client.navigate(url).then(function () {
+                            return client.focus();
+                        });
+                    }
+
                     client.postMessage({
                         type: "NAVIGATE",
                         url: url
