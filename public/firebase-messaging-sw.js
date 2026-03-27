@@ -15,40 +15,67 @@ firebase.initializeApp({
 var messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(function (payload) {
-    var title = (payload && payload.notification && payload.notification.title)
-        ? payload.notification.title
-        : "InShift";
+    var title =
+        payload && payload.notification && payload.notification.title
+            ? payload.notification.title
+            : "InShift";
 
-    var body = (payload && payload.notification && payload.notification.body)
-        ? payload.notification.body
-        : "";
+    var body =
+        payload && payload.notification && payload.notification.body
+            ? payload.notification.body
+            : "";
 
-    var url = (payload && payload.data && payload.data.url)
-        ? payload.data.url
-        : "/emp/notifications";
+    var url =
+        payload && payload.data && payload.data.url
+            ? payload.data.url
+            : "/emp/notifications";
+
+    var presenceCheckId =
+        payload && payload.data && payload.data.presenceCheckId
+            ? payload.data.presenceCheckId
+            : null;
+
+    var sourceExpected =
+        payload && payload.data && payload.data.sourceExpected
+            ? payload.data.sourceExpected
+            : "ANY";
 
     self.registration.showNotification(title, {
         body: body,
-        data: { url: url }
+        data: {
+            url: url,
+            presenceCheckId: presenceCheckId,
+            sourceExpected: sourceExpected,
+            type: payload && payload.data ? payload.data.type : null
+        }
     });
 });
 
 self.addEventListener("notificationclick", function (event) {
     event.notification.close();
 
-    var url = (event.notification && event.notification.data && event.notification.data.url)
-        ? event.notification.data.url
-        : "/emp/notifications";
+    var url =
+        event.notification &&
+        event.notification.data &&
+        event.notification.data.url
+            ? event.notification.data.url
+            : "/emp/notifications";
 
     event.waitUntil(
         clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (clientList) {
             for (var i = 0; i < clientList.length; i++) {
                 var client = clientList[i];
-                if ("focus" in client) {
-                    client.postMessage({ type: "NAVIGATE", url: url });
+
+                // only reuse tabs that belong to this app origin
+                if (client && "url" in client && client.url && client.url.indexOf(self.location.origin) === 0) {
+                    client.postMessage({
+                        type: "NAVIGATE",
+                        url: url
+                    });
                     return client.focus();
                 }
             }
+
             return clients.openWindow(url);
         })
     );

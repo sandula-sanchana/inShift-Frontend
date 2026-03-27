@@ -7,7 +7,7 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
     allowedHosts: [
-      "provocatively-televisional-wei.ngrok-free.dev",
+      "provocatively-televisional-wei.ngrok-free.dev"
     ],
     proxy: {
       "/api": {

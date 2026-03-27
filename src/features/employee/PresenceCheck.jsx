@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { api } from "../../lib/api.js";
 import { Button } from "../../components/ui/Button.jsx";
 import { Badge } from "../../components/ui/Badge.jsx";
@@ -9,18 +10,31 @@ import { getOrCreateDeviceFingerprint } from "../../lib/deviceFingerprint.js";
 
 const BASE = "/v1/emp/presence-check";
 
+function useQuery() {
+    return new URLSearchParams(useLocation().search);
+}
+
 export default function PresenceCheck() {
     const toast = useToast((s) => s.push);
+    const query = useQuery();
+    const presenceCheckId = query.get("presenceCheckId");
 
     const [loading, setLoading] = useState(true);
     const [responding, setResponding] = useState(false);
     const [check, setCheck] = useState(null);
     const [remaining, setRemaining] = useState(null);
 
-    async function loadCurrent() {
+    async function loadPresenceCheck() {
         try {
             setLoading(true);
-            const res = await api.get(`${BASE}/current`);
+
+            let res;
+            if (presenceCheckId) {
+                res = await api.get(`${BASE}/${presenceCheckId}`);
+            } else {
+                res = await api.get(`${BASE}/current`);
+            }
+
             setCheck(res?.data?.data || null);
         } catch (e) {
             setCheck(null);
@@ -30,8 +44,8 @@ export default function PresenceCheck() {
     }
 
     useEffect(() => {
-        loadCurrent();
-    }, []);
+        loadPresenceCheck();
+    }, [presenceCheckId]);
 
     useEffect(() => {
         if (!check?.dueAt) {
@@ -83,7 +97,7 @@ export default function PresenceCheck() {
                         variant: "success",
                     });
 
-                    await loadCurrent();
+                    await loadPresenceCheck();
                 } catch (e) {
                     toast({
                         title: "Response failed",
@@ -127,7 +141,7 @@ export default function PresenceCheck() {
                 variant: "success",
             });
 
-            await loadCurrent();
+            await loadPresenceCheck();
         } catch (e) {
             toast({
                 title: "Response failed",

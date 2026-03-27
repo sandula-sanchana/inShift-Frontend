@@ -6,42 +6,15 @@ import { Badge } from "../../../components/ui/Badge.jsx";
 import { Bell, Save, Send, Loader2, Smartphone, ShieldCheck } from "lucide-react";
 import { useToast } from "../../../components/ui/Toast.jsx";
 import { api } from "../../../lib/api.js";
-import { enableNotifications } from "../../../lib/notifications.js";
+import {
+  enableAndRegisterNotifications,
+  disableCurrentDeviceNotifications,
+  getMyRegisteredNotificationDevices,
+  getNotificationPermissionStatus,
+  getSavedFcmToken,
+} from "../../../lib/notifications.js";
 
-const DEVICE_TOKEN_BASE = "/v1/emp/device-tokens";
-const LOCAL_FCM_TOKEN_KEY = "inshift_fcm_token";
 const LOCAL_PREFS_KEY = "inshift_notification_prefs";
-
-function getDeviceType() {
-  const ua = navigator.userAgent || "";
-
-  if (/Android/i.test(ua)) return "ANDROID";
-  if (/iPhone|iPad|iPod/i.test(ua)) return "IOS";
-  if (/Windows/i.test(ua)) return "WINDOWS";
-  if (/Macintosh|Mac OS X/i.test(ua)) return "MAC";
-  if (/Linux/i.test(ua)) return "LINUX";
-
-  return "WEB";
-}
-
-function getDeviceName() {
-  const ua = navigator.userAgent || "";
-
-  if (/Android/i.test(ua)) return "Android Browser";
-  if (/iPhone|iPad|iPod/i.test(ua)) return "iPhone / iPad Browser";
-  if (/Windows/i.test(ua)) return "Windows Browser";
-  if (/Macintosh|Mac OS X/i.test(ua)) return "Mac Browser";
-  if (/Linux/i.test(ua)) return "Linux Browser";
-
-  return "Web Browser";
-}
-
-function getPermissionValue() {
-  if (typeof window === "undefined" || !("Notification" in window)) {
-    return "unsupported";
-  }
-  return Notification.permission;
-}
 
 export default function Notifications() {
   const toast = useToast((s) => s.push);
@@ -50,7 +23,7 @@ export default function Notifications() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
 
-  const [permission, setPermission] = useState(getPermissionValue());
+  const [permission, setPermission] = useState(getNotificationPermissionStatus());
   const [enabled, setEnabled] = useState(false);
   const [registeredDevice, setRegisteredDevice] = useState(null);
 
@@ -69,11 +42,15 @@ export default function Notifications() {
 
   async function loadMyTokens() {
     try {
-      const res = await api.get(`${DEVICE_TOKEN_BASE}/my`);
-      const tokens = res?.data?.data || [];
+      const tokens = await getMyRegisteredNotificationDevices();
+      const localToken = getSavedFcmToken();
 
-      setRegisteredDevice(tokens[0] || null);
-      setEnabled(tokens.length > 0);
+      const currentDeviceToken = localToken
+          ? tokens.find((t) => t.fcmToken === localToken)
+          : null;
+
+      setRegisteredDevice(currentDeviceToken || null);
+      setEnabled(!!currentDeviceToken);
     } catch (e) {
       setRegisteredDevice(null);
       setEnabled(false);
@@ -81,7 +58,7 @@ export default function Notifications() {
   }
 
   useEffect(() => {
-    setPermission(getPermissionValue());
+    setPermission(getNotificationPermissionStatus());
     loadMyTokens();
   }, []);
 
@@ -100,8 +77,8 @@ export default function Notifications() {
     setLoading(true);
 
     try {
-      const token = await enableNotifications();
-      setPermission(getPermissionValue());
+      const token = await enableAndRegisterNotifications();
+      setPermission(getNotificationPermissionStatus());
 
       if (!token) {
         toast({
@@ -112,23 +89,9 @@ export default function Notifications() {
         return;
       }
 
-      const payload = {
-        fcmToken: token,
-        deviceType: getDeviceType(),
-        deviceName: getDeviceName(),
-        userAgent: navigator.userAgent || "",
-      };
-
-      const res = await api.post(`${DEVICE_TOKEN_BASE}/register`, payload);
-      const data = res?.data?.data || null;
-
-      localStorage.setItem(LOCAL_FCM_TOKEN_KEY, token);
-      setRegisteredDevice(data);
-      setEnabled(true);
-
       toast({
         title: "Notifications enabled",
-        message: "This device is now registered for push notifications.",
+        message: "This browser is now registered for push notifications.",
         variant: "success",
       });
 
@@ -137,7 +100,7 @@ export default function Notifications() {
       console.error(e);
       toast({
         title: "Enable failed",
-        message: e?.response?.data?.message || "Could not enable notifications on this device.",
+        message: e?.response?.data?.message || "Could not enable notifications on this browser.",
         variant: "error",
       });
     } finally {
@@ -146,29 +109,26 @@ export default function Notifications() {
   }
 
   async function disableCurrentDevice() {
-    const token = localStorage.getItem(LOCAL_FCM_TOKEN_KEY);
-
-    if (!token) {
-      toast({
-        title: "No token found",
-        message: "This browser does not have a saved device token.",
-        variant: "warning",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      await api.post(`${DEVICE_TOKEN_BASE}/deactivate`, { fcmToken: token });
+      const ok = await disableCurrentDeviceNotifications();
 
-      localStorage.removeItem(LOCAL_FCM_TOKEN_KEY);
+      if (!ok) {
+        toast({
+          title: "No token found",
+          message: "This browser does not have a saved device token.",
+          variant: "warning",
+        });
+        return;
+      }
+
       setRegisteredDevice(null);
       setEnabled(false);
 
       toast({
         title: "Notifications disabled",
-        message: "This device will no longer receive push notifications.",
+        message: "This browser will no longer receive push notifications.",
         variant: "success",
       });
 
@@ -176,7 +136,7 @@ export default function Notifications() {
     } catch (e) {
       toast({
         title: "Disable failed",
-        message: e?.response?.data?.message || "Could not deactivate this device token.",
+        message: e?.response?.data?.message || "Could not deactivate this browser token.",
         variant: "error",
       });
     } finally {
@@ -210,10 +170,17 @@ export default function Notifications() {
     setSendingTest(true);
 
     try {
+      const res = await api.post("/v1/admin/notifications/test");
       toast({
-        title: "Test endpoint pending",
-        message: "Create a backend endpoint later to send a test FCM notification.",
-        variant: "warning",
+        title: "Test sent",
+        message: res?.data?.message || "Test notification sent.",
+        variant: "success",
+      });
+    } catch (e) {
+      toast({
+        title: "Test failed",
+        message: e?.response?.data?.message || "Could not send test notification.",
+        variant: "error",
       });
     } finally {
       setSendingTest(false);
@@ -236,7 +203,7 @@ export default function Notifications() {
             subtitle="Push notifications for attendance checks, shift changes, and OT approvals."
             right={
               <Badge variant={enabled ? "success" : "neutral"}>
-                {enabled ? "Enabled on this device" : "Not enabled"}
+                {enabled ? "Enabled on this browser" : "Not enabled on this browser"}
               </Badge>
             }
         />
@@ -246,7 +213,7 @@ export default function Notifications() {
             <CardHeader>
               <CardTitle>Device & push setup</CardTitle>
               <CardDescription>
-                Enable browser notifications and register this device token.
+                Enable browser notifications and register this browser token.
               </CardDescription>
             </CardHeader>
 
@@ -265,7 +232,9 @@ export default function Notifications() {
 
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="neutral">Permission: {permissionLabel}</Badge>
-                      <Badge variant="neutral">Device: {getDeviceType()}</Badge>
+                      <Badge variant="neutral">
+                        Device: {registeredDevice?.deviceType || "Unknown"}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -279,7 +248,7 @@ export default function Notifications() {
                   </span>
 
                       <div className="text-sm text-slate-700">
-                        <div className="font-semibold text-slate-900">Current device registered</div>
+                        <div className="font-semibold text-slate-900">Current browser registered</div>
                         <div className="mt-1">{registeredDevice.deviceName || "Unnamed device"}</div>
                         <div className="mt-1 text-xs text-slate-500">
                           Type: {registeredDevice.deviceType || "-"}
@@ -306,7 +275,7 @@ export default function Notifications() {
                     disabled={loading || !enabled}
                 >
                   <Smartphone className="h-4 w-4" />
-                  Disable This Device
+                  Disable This Browser
                 </Button>
 
                 <Button variant="secondary" onClick={sendTest} disabled={sendingTest}>
