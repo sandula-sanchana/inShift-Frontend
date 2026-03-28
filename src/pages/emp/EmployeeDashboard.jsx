@@ -31,6 +31,8 @@ import Shifts from "../../features/employee/shifts/Shifts.jsx";
 import Security from "../../features/employee/security.jsx";
 import Corrections from "../../features/employee/AttendanceCorrections.jsx";
 import PresenceCheck from "../../features/employee/PresenceCheck.jsx";
+import MyOvertime from "../../features/employee/MyOvertime.jsx";
+import SwapRequests from "../../features/employee/SwapRequests.jsx";
 
 function detectRequestedTrustType() {
     const ua = navigator.userAgent || "";
@@ -365,10 +367,8 @@ export default function EmployeeDashboard() {
                                     path="shifts"
                                     element={<Shifts />}
                                 />
-                                <Route
-                                    path="ot"
-                                    element={<div className="text-slate-900 font-semibold">My OT Page</div>}
-                                />
+                                <Route path="ot" element={<MyOvertime />} />
+                                <Route path="ot/swaps" element={<SwapRequests />} />
                                 <Route path="security" element={<Security />} />
                                 <Route path="*" element={<Navigate to="/emp" replace />} />
                             </Routes>

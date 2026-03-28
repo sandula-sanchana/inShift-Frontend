@@ -31,6 +31,7 @@ import AttendanceIntelligencePage from "../../features/admin/AdminAttendanceInte
 import AdminDeviceEnrollmentRequestsPage from "../../features/admin/AdminDeviceEnrollmentRequestsPage.jsx";
 import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesPage.jsx";
 import AdminPresenceChecksPage from "../../features/admin/AdminPresenceChecksPage.jsx";
+import AdminOvertime from "../../features/admin/AdminOvertime.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -344,9 +345,8 @@ export default function AdminDashboard() {
             { to: "/admin/presence-checks", icon: ShieldCheck, label: "Presence Checks" },
             { to: "/admin/attendance-rules", icon: Settings, label: "Attendance Rules" },
             { to: "/admin/shifts", icon: Clock3, label: "Shift Settings" },
-            { to: "/admin/device-enrollment", icon: ShieldCheck, label: "Device Requests" },
-            { to: "/admin/georules", icon: MapPin, label: "Geo Rules" },
-            { to: "/admin/settings", icon: Settings, label: "Admin Settings" },
+            { to: "/admin/overtime", icon: Clock3, label: "Overtime" },
+            { to: "/admin/device-enrollment", icon: ShieldCheck, label: "Device Requests" }
         ],
         []
     );
@@ -455,15 +455,9 @@ export default function AdminDashboard() {
                                     <Route path="presence-checks" element={<AdminPresenceChecksPage />} />
                                     <Route path="attendance-rules" element={<AdminAttendanceRulesPage />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
+                                    <Route path="overtime" element={<AdminOvertime />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />
-                                    <Route
-                                        path="settings"
-                                        element={
-                                            <div className="text-white font-semibold animate-in fade-in duration-500">
-                                                System Settings
-                                            </div>
-                                        }
-                                    />
+
                                     <Route path="*" element={<Navigate to="/admin" replace />} />
                                 </Routes>
                             </div>
