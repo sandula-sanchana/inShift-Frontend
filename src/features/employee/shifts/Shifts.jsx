@@ -5,7 +5,7 @@ import { Button } from "../../../components/ui/Button.jsx";
 import { Badge } from "../../../components/ui/Badge.jsx";
 import { EmptyState } from "../../../components/common/EmptyState.jsx";
 import { CalendarDays, Repeat2, Shuffle, PlusCircle, Users } from "lucide-react";
-import { useToast } from "../../../components/ui/Toast.jsx";
+import { useToast } from "../../../components/ui/toast-store.js";
 
 const tabs = [
   { key: "calendar", label: "Calendar" },

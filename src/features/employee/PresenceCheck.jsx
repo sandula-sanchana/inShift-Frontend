@@ -14,7 +14,7 @@ import {
     AlertTriangle,
     XCircle
 } from "lucide-react";
-import { useToast } from "../../components/ui/Toast.jsx";
+import { useToast } from "../../components/ui/toast-store.js";
 import { getOrCreateDeviceFingerprint } from "../../lib/deviceFingerprint.js";
 
 const BASE = "/v1/emp/presence-check";

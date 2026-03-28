@@ -4,7 +4,7 @@ import AuthShell from "./AuthShell.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { Button } from "../../components/ui/Button.jsx";
 import { authStore } from "../../features/auth/store.js";
-import { useToast } from "../../components/ui/Toast.jsx";
+import { useToast } from "../../components/ui/toast-store.js";
 import { api } from "../../lib/api.js";
 import { motion } from "framer-motion";
 import { ArrowRight, Info } from "lucide-react";

@@ -5,7 +5,7 @@ import { CheckCircle2, Info, KeyRound } from "lucide-react";
 import AuthShell from "./../../pages/auth_pages/AuthShell.jsx";
 import { Input } from "../../components/ui/Input.jsx";
 import { Button } from "../../components/ui/Button.jsx";
-import { useToast } from "../../components/ui/Toast.jsx";
+import { useToast } from "../../components/ui/toast-store.js";
 import { authStore } from "../auth/store.js";
 import { api } from "../../lib/api.js";
 

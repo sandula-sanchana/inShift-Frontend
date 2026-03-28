@@ -1,5 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { MapPin, Loader2, AlertTriangle, Info, Fingerprint, Clock3, CheckCircle2, CalendarClock } from "lucide-react";
+import {
+    MapPin,
+    Loader2,
+    AlertTriangle,
+    Info,
+    Fingerprint,
+    Clock3,
+    CheckCircle2,
+    CalendarClock,
+    ShieldCheck,
+    Smartphone,
+    Monitor,
+    Navigation,
+    TimerReset,
+    Sparkles,
+    X
+} from "lucide-react";
 import * as webauthnJson from "@github/webauthn-json";
 import { api } from "../../../lib/api.js";
 
@@ -38,16 +54,17 @@ function geoErrorMessage(e) {
 
 function Pill({ children, tone = "slate" }) {
     const tones = {
-        slate: "bg-slate-100 text-slate-700 ring-slate-200",
-        green: "bg-green-50 text-green-700 ring-green-200",
-        yellow: "bg-yellow-50 text-yellow-700 ring-yellow-200",
-        red: "bg-red-50 text-red-700 ring-red-200",
-        indigo: "bg-indigo-50 text-indigo-700 ring-indigo-200",
-        purple: "bg-purple-50 text-purple-700 ring-purple-200",
+        slate: "border-white/10 bg-white/[0.05] text-slate-300",
+        green: "border-emerald-500/20 bg-emerald-500/10 text-emerald-300",
+        yellow: "border-amber-500/20 bg-amber-500/10 text-amber-300",
+        red: "border-rose-500/20 bg-rose-500/10 text-rose-300",
+        indigo: "border-indigo-500/20 bg-indigo-500/10 text-indigo-300",
+        purple: "border-purple-500/20 bg-purple-500/10 text-purple-300",
+        cyan: "border-cyan-500/20 bg-cyan-500/10 text-cyan-300",
     };
 
     return (
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ${tones[tone]}`}>
+        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${tones[tone]}`}>
             {children}
         </span>
     );
@@ -63,20 +80,31 @@ function formatTime(value) {
     return new Date(value).toLocaleTimeString();
 }
 
+function GlassCard({ children, className = "" }) {
+    return (
+        <div className={`rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-none ${className}`}>
+            {children}
+        </div>
+    );
+}
+
 function SummaryCard({ summary, summaryLoading }) {
     if (summaryLoading) {
         return (
-            <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="text-sm text-slate-500">Loading today summary...</div>
-            </div>
+            <GlassCard className="mt-8 p-6">
+                <div className="flex items-center gap-3 text-sm text-slate-300">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading today summary...
+                </div>
+            </GlassCard>
         );
     }
 
     if (!summary) {
         return (
-            <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="text-sm text-slate-500">No summary available yet.</div>
-            </div>
+            <GlassCard className="mt-8 p-6">
+                <div className="text-sm text-slate-400">No summary available yet.</div>
+            </GlassCard>
         );
     }
 
@@ -89,11 +117,11 @@ function SummaryCard({ summary, summaryLoading }) {
                             "slate";
 
     return (
-        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <GlassCard className="mt-8 p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
-                    <div className="text-lg font-bold text-slate-900">Today Summary</div>
-                    <div className="mt-1 text-sm text-slate-500">
+                    <div className="text-lg font-bold text-white">Today Summary</div>
+                    <div className="mt-1 text-sm text-slate-400">
                         Daily attendance result based on your valid punches.
                     </div>
                 </div>
@@ -102,19 +130,19 @@ function SummaryCard({ summary, summaryLoading }) {
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">First In</div>
-                    <div className="mt-2 text-sm font-bold text-slate-900">{formatTime(summary.firstInTime)}</div>
-                    <div className="mt-1 text-xs text-slate-500">{formatDateTime(summary.firstInTime)}</div>
+                    <div className="mt-2 text-sm font-bold text-white">{formatTime(summary.firstInTime)}</div>
+                    <div className="mt-1 text-xs text-slate-400">{formatDateTime(summary.firstInTime)}</div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last Out</div>
-                    <div className="mt-2 text-sm font-bold text-slate-900">{formatTime(summary.lastOutTime)}</div>
-                    <div className="mt-1 text-xs text-slate-500">{formatDateTime(summary.lastOutTime)}</div>
+                    <div className="mt-2 text-sm font-bold text-white">{formatTime(summary.lastOutTime)}</div>
+                    <div className="mt-1 text-xs text-slate-400">{formatDateTime(summary.lastOutTime)}</div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Presence</div>
                     <div className="mt-2 flex flex-wrap gap-2">
                         <Pill tone={summary.present ? "green" : "slate"}>
@@ -126,16 +154,16 @@ function SummaryCard({ summary, summaryLoading }) {
                     </div>
                 </div>
 
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Minutes</div>
-                    <div className="mt-2 space-y-1 text-sm text-slate-700">
+                    <div className="mt-2 space-y-1 text-sm text-slate-300">
                         <div>Late: <b>{summary.lateMinutes ?? 0}</b></div>
                         <div>Early leave: <b>{summary.earlyLeaveMinutes ?? 0}</b></div>
                         <div>Overtime: <b>{summary.overtimeMinutes ?? 0}</b></div>
                     </div>
                 </div>
             </div>
-        </div>
+        </GlassCard>
     );
 }
 
@@ -160,9 +188,9 @@ export default function Attendance() {
 
     const accuracyLabel = useMemo(() => {
         if (accuracy == null) return null;
-        if (accuracy <= 30) return { text: "Good", cls: "text-green-700 bg-green-50 ring-green-200" };
-        if (accuracy <= MAX_OK_ACCURACY) return { text: "Ok", cls: "text-yellow-700 bg-yellow-50 ring-yellow-200" };
-        return { text: "Poor", cls: "text-red-700 bg-red-50 ring-red-200" };
+        if (accuracy <= 30) return { text: "Good", cls: "green" };
+        if (accuracy <= MAX_OK_ACCURACY) return { text: "Ok", cls: "yellow" };
+        return { text: "Poor", cls: "red" };
     }, [accuracy]);
 
     const fetchTodaySummary = async () => {
@@ -329,43 +357,75 @@ export default function Attendance() {
         setPendingType(null);
     };
 
-    const statusColor =
+    const statusTone =
         attendance?.status === "VALID"
-            ? "bg-green-500"
+            ? "green"
             : attendance?.status === "PENDING"
-                ? "bg-yellow-500"
-                : "bg-slate-300";
+                ? "yellow"
+                : "slate";
 
     const actionBusy = loading || verifyingPasskey;
 
     return (
-        <div className="max-w-4xl mx-auto py-10 px-4">
-            <div className="text-center">
-                <h1 className="text-3xl font-bold text-slate-900">Attendance</h1>
-                <p className="text-sm text-slate-500 mt-2">
-                    Mobile uses GPS + passkey biometric verification. PC uses manual Web attendance (Pending approval).
-                </p>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <div className="h-1 w-8 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.6)]" />
+                        <h1 className="text-3xl font-black tracking-tight text-white">Attendance</h1>
+                    </div>
+                    <p className="mt-2 text-sm text-slate-400">
+                        Mobile uses GPS + passkey biometric verification. PC uses manual Web attendance with pending approval.
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <Pill tone={isMobileDevice() ? "indigo" : "slate"}>
+                        {isMobileDevice() ? (
+                            <>
+                                <Smartphone className="mr-1 h-3.5 w-3.5" />
+                                Mobile Mode
+                            </>
+                        ) : (
+                            <>
+                                <Monitor className="mr-1 h-3.5 w-3.5" />
+                                PC Mode
+                            </>
+                        )}
+                    </Pill>
+
+                    {accuracy != null && accuracyLabel && (
+                        <Pill tone={accuracyLabel.cls}>
+                            <Navigation className="mr-1 h-3.5 w-3.5" />
+                            {accuracy}m • {accuracyLabel.text}
+                        </Pill>
+                    )}
+                </div>
             </div>
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr]">
-                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="text-sm font-semibold text-slate-500">Latest Punch</div>
+            <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+                <GlassCard className="p-6">
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm font-semibold text-slate-400">Latest Punch</div>
+                        <Pill tone={statusTone}>{attendance?.status || "No record"}</Pill>
+                    </div>
 
-                    <div className="mt-6 flex justify-center">
+                    <div className="mt-8 flex justify-center">
                         <div className="relative">
-                            <div className={`h-40 w-40 rounded-full ${statusColor} opacity-20`} />
+                            <div className="h-44 w-44 rounded-full border border-white/10 bg-white/[0.03]" />
+                            <div className="absolute inset-3 rounded-full bg-gradient-to-br from-indigo-500/10 to-cyan-500/10 blur-xl" />
                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <div className="text-sm text-slate-500">
+                                <div className="text-sm text-slate-400">
                                     {attendance ? attendance.type : "Not Marked"}
                                 </div>
-                                <div className="text-xl font-bold text-slate-900 mt-1">
+                                <div className="mt-1 text-2xl font-bold text-white">
                                     {attendance ? new Date(attendance.eventTime).toLocaleTimeString() : "-- : --"}
                                 </div>
-                                <div className="text-xs text-slate-500 mt-1">
+                                <div className="mt-1 text-xs text-slate-500">
                                     {attendance ? attendance.status : "No record"}
                                 </div>
                                 {attendance?.attendanceMark && (
-                                    <div className="mt-2">
+                                    <div className="mt-3">
                                         <Pill tone="indigo">{attendance.attendanceMark}</Pill>
                                     </div>
                                 )}
@@ -373,19 +433,10 @@ export default function Attendance() {
                         </div>
                     </div>
 
-                    {isMobileDevice() && accuracy != null && accuracyLabel && (
-                        <div className="mt-6 flex justify-center">
-                            <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1 ${accuracyLabel.cls}`}>
-                                <MapPin className="h-4 w-4" />
-                                Accuracy: {accuracy}m • {accuracyLabel.text}
-                            </div>
-                        </div>
-                    )}
-
                     {isMobileDevice() && (
-                        <div className="mt-4 flex justify-center">
-                            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs ring-1 bg-slate-50 text-slate-700 ring-slate-200">
-                                <Fingerprint className="h-4 w-4" />
+                        <div className="mt-6 flex justify-center">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-slate-300">
+                                <Fingerprint className="h-4 w-4 text-indigo-300" />
                                 Mobile attendance requires passkey verification
                             </div>
                         </div>
@@ -395,7 +446,7 @@ export default function Attendance() {
                         <button
                             onClick={() => punch("IN")}
                             disabled={actionBusy}
-                            className="w-full rounded-2xl bg-slate-900 text-white py-3 text-lg font-semibold hover:bg-slate-800 transition disabled:opacity-50"
+                            className="w-full rounded-2xl border border-indigo-500/20 bg-indigo-500/10 py-3 text-lg font-semibold text-white transition hover:bg-indigo-500/20 disabled:opacity-50"
                         >
                             {actionBusy ? (
                                 <span className="flex items-center justify-center gap-2">
@@ -410,27 +461,27 @@ export default function Attendance() {
                         <button
                             onClick={() => punch("OUT")}
                             disabled={actionBusy}
-                            className="w-full rounded-2xl bg-red-600 text-white py-3 text-lg font-semibold hover:bg-red-700 transition disabled:opacity-50"
+                            className="w-full rounded-2xl border border-rose-500/20 bg-rose-500/10 py-3 text-lg font-semibold text-white transition hover:bg-rose-500/20 disabled:opacity-50"
                         >
                             {actionBusy ? "Processing..." : "Check Out"}
                         </button>
                     </div>
-                </div>
+                </GlassCard>
 
                 <div>
                     {error && (
-                        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-200">
                             <div className="flex items-start gap-2">
-                                <AlertTriangle className="h-4 w-4 mt-0.5" />
+                                <AlertTriangle className="mt-0.5 h-4 w-4" />
                                 <div>{error}</div>
                             </div>
                         </div>
                     )}
 
                     {info && (
-                        <div className="rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 mb-4">
+                        <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-200">
                             <div className="flex items-start gap-2">
-                                <CheckCircle2 className="h-4 w-4 mt-0.5" />
+                                <CheckCircle2 className="mt-0.5 h-4 w-4" />
                                 <div>{info}</div>
                             </div>
                         </div>
@@ -439,100 +490,145 @@ export default function Attendance() {
                     <SummaryCard summary={summary} summaryLoading={summaryLoading} />
 
                     {showHelp && isMobileDevice() && (
-                        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
-                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                <Info className="h-4 w-4" />
-                                How to enable location (Android / iPhone)
+                        <GlassCard className="mt-6 p-5">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                                <Info className="h-4 w-4 text-indigo-300" />
+                                How to enable location
                             </div>
 
-                            <div className="mt-3 grid gap-3 text-sm text-slate-700">
-                                <div className="rounded-xl bg-slate-50 p-3">
-                                    <div className="font-semibold">Android (Chrome)</div>
-                                    <ul className="mt-1 list-disc pl-5 space-y-1">
-                                        <li>Turn on <b>Location</b> (GPS) from Quick Settings.</li>
+                            <div className="mt-4 grid gap-3 text-sm text-slate-300">
+                                <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                                    <div className="font-semibold text-white">Android (Chrome)</div>
+                                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                                        <li>Turn on <b>Location</b> from Quick Settings.</li>
                                         <li>Chrome → Site settings → <b>Location</b> → Allow.</li>
                                         <li>Set Location mode to <b>High accuracy</b>.</li>
                                     </ul>
                                 </div>
 
-                                <div className="rounded-xl bg-slate-50 p-3">
-                                    <div className="font-semibold">iPhone (Safari)</div>
-                                    <ul className="mt-1 list-disc pl-5 space-y-1">
+                                <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4">
+                                    <div className="font-semibold text-white">iPhone (Safari)</div>
+                                    <ul className="mt-2 list-disc space-y-1 pl-5">
                                         <li>Settings → Privacy & Security → <b>Location Services</b> → ON.</li>
                                         <li>Settings → Safari → <b>Location</b> → Allow (or Ask).</li>
                                         <li>Refresh the page and try again.</li>
                                     </ul>
                                 </div>
                             </div>
-                        </div>
+                        </GlassCard>
                     )}
 
-                    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                            <CalendarClock className="h-4 w-4" />
+                    <GlassCard className="mt-6 p-5">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                            <CalendarClock className="h-4 w-4 text-indigo-300" />
                             Current Rules
                         </div>
-                        <div className="mt-3 space-y-2 text-sm text-slate-600">
-                            <div>• Mobile punch uses GPS + passkey verification.</div>
-                            <div>• Web punch requires a reason and goes for approval.</div>
-                            <div>• Daily summary updates after successful attendance actions.</div>
-                            <div>• Late, early leave, and overtime are calculated from your assigned shift.</div>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-sm text-slate-300">
+                                <div className="flex items-center gap-2 font-semibold text-white">
+                                    <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                                    Mobile Verification
+                                </div>
+                                <div className="mt-2 text-sm text-slate-400">
+                                    Mobile punch uses GPS + passkey verification.
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-sm text-slate-300">
+                                <div className="flex items-center gap-2 font-semibold text-white">
+                                    <Monitor className="h-4 w-4 text-cyan-300" />
+                                    Web Attendance
+                                </div>
+                                <div className="mt-2 text-sm text-slate-400">
+                                    Web punch requires a reason and goes for approval.
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-sm text-slate-300">
+                                <div className="flex items-center gap-2 font-semibold text-white">
+                                    <Sparkles className="h-4 w-4 text-purple-300" />
+                                    Daily Summary
+                                </div>
+                                <div className="mt-2 text-sm text-slate-400">
+                                    Daily summary updates after successful attendance actions.
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-sm text-slate-300">
+                                <div className="flex items-center gap-2 font-semibold text-white">
+                                    <TimerReset className="h-4 w-4 text-amber-300" />
+                                    Calculations
+                                </div>
+                                <div className="mt-2 text-sm text-slate-400">
+                                    Late, early leave, and overtime are calculated from your assigned shift.
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </GlassCard>
                 </div>
             </div>
 
             {showFallback && (
-                <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
-                    <div className="w-full max-w-md rounded-3xl bg-white shadow-lg ring-1 ring-slate-200 p-5">
-                        <div className="flex items-start gap-3">
-                            <div className="mt-1 rounded-xl bg-yellow-50 p-2 ring-1 ring-yellow-200">
-                                <AlertTriangle className="h-5 w-5 text-yellow-700" />
-                            </div>
-                            <div className="flex-1">
-                                <div className="text-base font-semibold text-slate-900">
-                                    Web Attendance (Manual)
+                <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[#07111f]/95 p-5 shadow-2xl">
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                                <div className="mt-1 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-2">
+                                    <AlertTriangle className="h-5 w-5 text-amber-300" />
                                 </div>
+                                <div className="flex-1">
+                                    <div className="text-base font-semibold text-white">
+                                        Web Attendance (Manual)
+                                    </div>
 
-                                <div className="mt-1 text-sm text-slate-600">
-                                    {!isMobileDevice() ? (
-                                        <>
-                                            You are using a <b>PC</b>. Web attendance requires a reason and will be{" "}
-                                            <b>PENDING</b> until approved.
-                                        </>
-                                    ) : (
-                                        <>
-                                            Location is not reliable (accuracy: {accuracy ?? "unknown"}m). You can submit Web attendance →{" "}
-                                            <b>PENDING</b>.
-                                        </>
-                                    )}
+                                    <div className="mt-1 text-sm text-slate-400">
+                                        {!isMobileDevice() ? (
+                                            <>
+                                                You are using a <b>PC</b>. Web attendance requires a reason and will be{" "}
+                                                <b>PENDING</b> until approved.
+                                            </>
+                                        ) : (
+                                            <>
+                                                Location is not reliable (accuracy: {accuracy ?? "unknown"}m). You can submit Web attendance →{" "}
+                                                <b>PENDING</b>.
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
+
+                            <button
+                                onClick={closeModal}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
                         </div>
 
-                        <div className="mt-4">
-                            <label className="text-xs font-semibold text-slate-700">
+                        <div className="mt-5">
+                            <label className="text-xs font-semibold text-slate-300">
                                 Reason (required)
                             </label>
                             <textarea
                                 value={webReason}
                                 onChange={(e) => setWebReason(e.target.value)}
-                                rows={3}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 p-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                rows={4}
+                                className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-900/40 p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500/40"
                                 placeholder="Example: Marking from office PC / GPS permission issue / accuracy too low."
                             />
                         </div>
 
                         <div className="mt-5 flex gap-3">
                             <button
-                                className="flex-1 rounded-2xl bg-slate-900 text-white py-2.5 text-sm font-semibold hover:bg-slate-800 disabled:opacity-50"
+                                className="flex-1 rounded-2xl border border-indigo-500/20 bg-indigo-500/10 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500/20 disabled:opacity-50"
                                 disabled={actionBusy}
                                 onClick={submitWebFallback}
                             >
                                 {actionBusy ? "Submitting..." : "Submit (Pending)"}
                             </button>
                             <button
-                                className="flex-1 rounded-2xl bg-white text-slate-700 py-2.5 text-sm font-semibold ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-50"
+                                className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] py-2.5 text-sm font-semibold text-slate-300 hover:bg-white/[0.06] disabled:opacity-50"
                                 disabled={actionBusy}
                                 onClick={closeModal}
                             >
