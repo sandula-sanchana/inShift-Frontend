@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Clock3,
     RefreshCw,
@@ -8,7 +8,11 @@ import {
     TimerReset,
     PlusCircle,
     ShieldCheck,
-    Wallet
+    Wallet,
+    Search,
+    X,
+    Check,
+    BriefcaseBusiness
 } from "lucide-react";
 import { api } from "../../lib/api.js";
 import { Button } from "../../components/ui/Button.jsx";
@@ -100,6 +104,107 @@ function StatCard({ title, value, hint, icon: Icon, tone = "indigo" }) {
     );
 }
 
+function EmployeeSearchSelect({
+                                  search,
+                                  setSearch,
+                                  options,
+                                  loading,
+                                  selectedEmployee,
+                                  onSelect,
+                                  onClear
+                              }) {
+    const [open, setOpen] = useState(false);
+    const boxRef = useRef(null);
+
+    useEffect(() => {
+        function handleOutside(event) {
+            if (!boxRef.current?.contains(event.target)) {
+                setOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleOutside);
+        return () => document.removeEventListener("mousedown", handleOutside);
+    }, []);
+
+    return (
+        <div ref={boxRef} className="relative">
+            <label className="mb-2 block text-sm font-semibold text-white">Employee</label>
+
+            {!selectedEmployee ? (
+                <>
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => {
+                                setSearch(e.target.value);
+                                setOpen(true);
+                            }}
+                            onFocus={() => setOpen(true)}
+                            placeholder="Search by emp code or employee name"
+                            className="w-full rounded-2xl border border-white/10 bg-slate-900/40 py-3 pl-11 pr-4 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500/40"
+                        />
+                    </div>
+
+                    {open && search.trim() && (
+                        <div className="absolute z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-white/10 bg-[#07111f] p-2 shadow-2xl">
+                            {loading ? (
+                                <div className="flex items-center gap-2 rounded-xl px-3 py-3 text-sm text-slate-300">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Searching employees...
+                                </div>
+                            ) : options.length === 0 ? (
+                                <div className="rounded-xl px-3 py-3 text-sm text-slate-400">
+                                    No employees found.
+                                </div>
+                            ) : (
+                                options.map((emp) => (
+                                    <button
+                                        key={emp.employeeId}
+                                        type="button"
+                                        onClick={() => {
+                                            onSelect(emp);
+                                            setOpen(false);
+                                        }}
+                                        className="flex w-full items-start justify-between rounded-xl px-3 py-3 text-left transition hover:bg-white/[0.05]"
+                                    >
+                                        <div>
+                                            <div className="text-sm font-semibold text-white">{emp.empCode}</div>
+                                            <div className="mt-1 text-sm text-slate-300">{emp.fullName}</div>
+                                            <div className="mt-1 text-xs text-slate-500">{emp.email || "-"}</div>
+                                        </div>
+                                        <Check className="mt-1 h-4 w-4 text-slate-500" />
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="rounded-2xl border border-indigo-500/20 bg-indigo-500/10 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <div className="text-sm font-semibold text-white">{selectedEmployee.empCode}</div>
+                            <div className="mt-1 text-sm text-slate-300">{selectedEmployee.fullName}</div>
+                            <div className="mt-1 text-xs text-slate-400">{selectedEmployee.email || "-"}</div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={onClear}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-300 hover:bg-white/[0.06]"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function AdminOvertime() {
     const toast = useToast((s) => s.push);
 
@@ -109,8 +214,12 @@ export default function AdminOvertime() {
 
     const [assignments, setAssignments] = useState([]);
 
+    const [employeeSearch, setEmployeeSearch] = useState("");
+    const [employeeOptions, setEmployeeOptions] = useState([]);
+    const [employeeSearchLoading, setEmployeeSearchLoading] = useState(false);
+    const [selectedEmployee, setSelectedEmployee] = useState(null);
+
     const [form, setForm] = useState({
-        employeeId: "",
         otDate: "",
         startTime: "",
         endTime: "",
@@ -141,6 +250,30 @@ export default function AdminOvertime() {
         loadAll();
     }, []);
 
+    useEffect(() => {
+        const q = employeeSearch.trim();
+
+        if (!q || selectedEmployee) {
+            setEmployeeOptions([]);
+            return;
+        }
+
+        const timeout = setTimeout(async () => {
+            try {
+                setEmployeeSearchLoading(true);
+                const res = await api.get(`/v1/admin/employees/search?q=${encodeURIComponent(q)}`);
+                const data = res?.data?.data || [];
+                setEmployeeOptions(data.filter((emp) => emp.active !== false));
+            } catch {
+                setEmployeeOptions([]);
+            } finally {
+                setEmployeeSearchLoading(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timeout);
+    }, [employeeSearch, selectedEmployee]);
+
     const stats = useMemo(() => {
         return {
             total: assignments.length,
@@ -157,11 +290,20 @@ export default function AdminOvertime() {
     async function createOvertime(e) {
         e.preventDefault();
 
+        if (!selectedEmployee?.employeeId) {
+            toast({
+                title: "Employee required",
+                message: "Please search and select an employee first.",
+                variant: "warning",
+            });
+            return;
+        }
+
         try {
             setCreating(true);
 
             await api.post("/v1/admin/ot", {
-                employeeId: Number(form.employeeId),
+                employeeId: selectedEmployee.employeeId,
                 otDate: form.otDate,
                 startTime: form.startTime,
                 endTime: form.endTime,
@@ -171,18 +313,20 @@ export default function AdminOvertime() {
 
             toast({
                 title: "OT assigned",
-                message: "The overtime assignment was created successfully.",
+                message: `Overtime assigned to ${selectedEmployee.empCode} successfully.`,
                 variant: "success",
             });
 
             setForm({
-                employeeId: "",
                 otDate: "",
                 startTime: "",
                 endTime: "",
                 breakMinutes: 0,
                 reason: "",
             });
+            setEmployeeSearch("");
+            setEmployeeOptions([]);
+            setSelectedEmployee(null);
 
             await loadAll(true);
         } catch (e2) {
@@ -202,7 +346,7 @@ export default function AdminOvertime() {
                 <div>
                     <div className="text-3xl font-black tracking-tight text-white">Overtime Management</div>
                     <div className="mt-2 text-sm text-slate-400">
-                        Assign overtime, monitor responses, and review OT activity across employees.
+                        Assign overtime, search employees by emp code, and review OT responses.
                     </div>
                 </div>
 
@@ -222,22 +366,27 @@ export default function AdminOvertime() {
             <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                 <Card className="border-white/10 bg-white/[0.03] backdrop-blur-xl shadow-none">
                     <CardHeader>
-                        <CardTitle className="text-white">Create OT Assignment</CardTitle>
+                        <CardTitle className="flex items-center gap-2 text-white">
+                            <BriefcaseBusiness className="h-5 w-5" />
+                            Create OT Assignment
+                        </CardTitle>
                     </CardHeader>
 
                     <CardContent>
                         <form className="space-y-4" onSubmit={createOvertime}>
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-white">Employee ID</label>
-                                <input
-                                    type="number"
-                                    value={form.employeeId}
-                                    onChange={(e) => updateField("employeeId", e.target.value)}
-                                    className="w-full rounded-2xl border border-white/10 bg-slate-900/40 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-indigo-500/40"
-                                    placeholder="Enter employee ID"
-                                    required
-                                />
-                            </div>
+                            <EmployeeSearchSelect
+                                search={employeeSearch}
+                                setSearch={setEmployeeSearch}
+                                options={employeeOptions}
+                                loading={employeeSearchLoading}
+                                selectedEmployee={selectedEmployee}
+                                onSelect={setSelectedEmployee}
+                                onClear={() => {
+                                    setSelectedEmployee(null);
+                                    setEmployeeSearch("");
+                                    setEmployeeOptions([]);
+                                }}
+                            />
 
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>

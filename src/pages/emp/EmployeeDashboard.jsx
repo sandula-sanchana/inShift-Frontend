@@ -525,7 +525,7 @@ export default function EmployeeDashboard() {
             { to: "/emp/verify", icon: Fingerprint, label: "Verify" },
             { to: "/emp/shifts", icon: CalendarDays, label: "My Shifts" },
             { to: "/emp/ot", icon: Clock3, label: "My OT" },
-            { to: "/emp/security", icon: ShieldCheck, label: "Security" },
+            { to: "/emp/security", icon: ShieldCheck, label: "Security" }
         ],
         []
     );

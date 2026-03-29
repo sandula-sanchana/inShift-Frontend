@@ -32,6 +32,7 @@ import AdminDeviceEnrollmentRequestsPage from "../../features/admin/AdminDeviceE
 import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesPage.jsx";
 import AdminPresenceChecksPage from "../../features/admin/AdminPresenceChecksPage.jsx";
 import AdminOvertime from "../../features/admin/AdminOvertime.jsx";
+import AdminAttendanceReportPage from "../../features/admin/AdminAttendanceReportPage.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -346,7 +347,8 @@ export default function AdminDashboard() {
             { to: "/admin/attendance-rules", icon: Settings, label: "Attendance Rules" },
             { to: "/admin/shifts", icon: Clock3, label: "Shift Settings" },
             { to: "/admin/overtime", icon: Clock3, label: "Overtime" },
-            { to: "/admin/device-enrollment", icon: ShieldCheck, label: "Device Requests" }
+            { to: "/admin/device-enrollment", icon: ShieldCheck, label: "Device Requests" },
+            { to: "/admin/attendance-report", icon: ClipboardList, label: "Attendance Report" }
         ],
         []
     );
@@ -457,6 +459,7 @@ export default function AdminDashboard() {
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route path="overtime" element={<AdminOvertime />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />
+                                    <Route path="attendance-report" element={<AdminAttendanceReportPage />} />
 
                                     <Route path="*" element={<Navigate to="/admin" replace />} />
                                 </Routes>
