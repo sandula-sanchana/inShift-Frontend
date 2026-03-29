@@ -8,7 +8,6 @@ import EmployeeDashboard from "./pages/emp/EmployeeDashboard.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import ForceChangePassword from "./features/employee/ForceChangePassword.jsx";
 
-// Optional: simple unauthorized page
 function Unauthorized() {
     return (
         <div style={{ padding: 24 }}>
@@ -21,21 +20,18 @@ function Unauthorized() {
 function ProtectedRoute({ children, allowedRoles }) {
     const location = useLocation();
 
-    const token = authStore((s) => s.token);
+    const token = authStore((s) => s.accessToken);
     const role = authStore((s) => s.user?.role);
     const mustChange = authStore((s) => s.user?.passwordMustChange);
 
-    //Not logged in
     if (!token) {
         return <Navigate to="/login" replace state={{ from: location }} />;
     }
 
-    //Force password change flow
     if (mustChange) {
         return <Navigate to="/force-change-password" replace />;
     }
 
-    //Role restriction
     if (allowedRoles && allowedRoles.length > 0) {
         if (!role || !allowedRoles.includes(role)) {
             return <Navigate to="/unauthorized" replace />;
@@ -48,13 +44,11 @@ function ProtectedRoute({ children, allowedRoles }) {
 export default function App() {
     return (
         <Routes>
-            {/* Public */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/force-change-password" element={<ForceChangePassword />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
-            {/* Employee App */}
             <Route
                 path="/emp/*"
                 element={
@@ -64,7 +58,6 @@ export default function App() {
                 }
             />
 
-            {/* Admin App */}
             <Route
                 path="/admin/*"
                 element={
@@ -74,7 +67,6 @@ export default function App() {
                 }
             />
 
-            {/* Catch All */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

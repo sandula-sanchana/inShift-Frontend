@@ -1,33 +1,63 @@
-// src/features/auth/store.js
 import { create } from "zustand";
 
-const TOKEN_KEY = "inshift_token";
+const ACCESS_TOKEN_KEY = "inshift_access_token";
+const REFRESH_TOKEN_KEY = "inshift_refresh_token";
 const USER_KEY = "inshift_user";
 
 export const authStore = create((set, get) => ({
-  token: localStorage.getItem(TOKEN_KEY) || null,
+  accessToken: localStorage.getItem(ACCESS_TOKEN_KEY) || null,
+  refreshToken: localStorage.getItem(REFRESH_TOKEN_KEY) || null,
   user: (() => {
     const raw = localStorage.getItem(USER_KEY);
     return raw ? JSON.parse(raw) : null;
   })(),
 
-  isAuthed: () => Boolean(get().token),
+  isAuthed: () => Boolean(get().accessToken),
 
-  setSession: (token, user) => {
-    localStorage.setItem(TOKEN_KEY, token);
+  setSession: (accessToken, refreshToken, user) => {
+    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
-    set({ token, user });
+
+    set({
+      accessToken,
+      refreshToken,
+      user,
+    });
+  },
+
+  updateAccessToken: (newAccessToken) => {
+    const currentRefreshToken = get().refreshToken;
+
+    localStorage.setItem(ACCESS_TOKEN_KEY, newAccessToken);
+
+    set({
+      accessToken: newAccessToken,
+      refreshToken: currentRefreshToken,
+    });
   },
 
   clearSession: () => {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    set({ token: null, user: null });
+
+    set({
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+    });
   },
 
   clear: () => {
-    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-    set({ token: null, user: null });
+
+    set({
+      accessToken: null,
+      refreshToken: null,
+      user: null,
+    });
   },
 }));

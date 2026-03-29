@@ -1,41 +1,46 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Search, Pencil, Trash2, X, RefreshCw, Users } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, X, RefreshCw } from "lucide-react";
 import { createPortal } from "react-dom";
 import { api } from "../../lib/api";
 
-// ======= CONFIG (change here if your paths differ) =======
 const EMP_BASE = "/v1/admin/employees";
 const BRANCH_BASE = "/v1/admin/branches";
-// =========================================================
 
 function cn(...xs) {
     return xs.filter(Boolean).join(" ");
 }
 
-// -------- APIResponse helpers --------
 function unwrapApiResponse(resData) {
     if (resData && typeof resData === "object" && "data" in resData) return resData.data;
     return resData;
 }
+
 function apiMessage(resData) {
     return resData?.message || resData?.msg || "";
 }
+
 function getErrorMessage(err, fallback = "Request failed") {
-    const msgFromBackend = err?.response?.data?.message || err?.response?.data?.msg;
+    const msgFromBackend =
+        err?.response?.data?.message ||
+        err?.response?.data?.msg ||
+        err?.response?.data?.data?.message;
+
     if (msgFromBackend) return msgFromBackend;
+
     const s = err?.response?.status;
     if (s) return `${fallback} (${s})`;
+
     return err?.message || fallback;
 }
-// -------------------------------------
 
 function validateEmployee(form) {
     const e = {};
-    if (!form.empCode?.trim()) e.empCode = "Employee code is required";
+
     if (!form.fullName?.trim()) e.fullName = "Full name is required";
     if (!form.branchId) e.branchId = "Branch is required";
     if (form.email?.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) e.email = "Invalid email";
     if (form.phone?.trim() && !/^(?:\+94|0)?7\d{8}$/.test(form.phone.trim())) e.phone = "Invalid SL phone";
+
     return e;
 }
 
@@ -70,7 +75,16 @@ function SlideOver({ open, title, subtitle, children, onClose }) {
     );
 }
 
-function Field({ label, value, onChange, placeholder, error, type = "text" }) {
+function Field({
+                   label,
+                   value,
+                   onChange,
+                   placeholder,
+                   error,
+                   type = "text",
+                   disabled = false,
+                   readOnly = false
+               }) {
     return (
         <div>
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</div>
@@ -79,9 +93,13 @@ function Field({ label, value, onChange, placeholder, error, type = "text" }) {
                 value={value ?? ""}
                 onChange={(e) => onChange?.(e.target.value)}
                 placeholder={placeholder}
+                disabled={disabled}
+                readOnly={readOnly}
                 className={cn(
-                    "w-full rounded-2xl border bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500",
-                    "focus:border-indigo-500/30 focus:bg-white/[0.06]",
+                    "w-full rounded-2xl border bg-white/[0.04] px-4 py-3 text-sm outline-none transition placeholder:text-slate-500",
+                    disabled || readOnly
+                        ? "cursor-not-allowed border-white/10 bg-white/[0.03] text-slate-400"
+                        : "text-white focus:border-indigo-500/30 focus:bg-white/[0.06]",
                     error ? "border-rose-500/30 ring-2 ring-rose-500/10" : "border-white/10"
                 )}
             />
@@ -162,11 +180,13 @@ export default function EmployeesPage() {
 
     async function loadAll() {
         if (abortRef.current) abortRef.current.abort();
+
         const controller = new AbortController();
         abortRef.current = controller;
 
         setLoading(true);
         setStatus("Loading employees...");
+
         try {
             const [empRes, brRes] = await Promise.all([
                 api.get(EMP_BASE, { signal: controller.signal }),
@@ -190,7 +210,6 @@ export default function EmployeesPage() {
     useEffect(() => {
         loadAll();
         return () => abortRef.current?.abort?.();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const branchOptions = useMemo(() => {
@@ -198,6 +217,7 @@ export default function EmployeesPage() {
             value: String(b.branchId),
             label: `${b.branchCode ?? ""} ${b.branchName ?? ""}`.trim() || `Branch #${b.branchId}`,
         }));
+
         return [{ value: "", label: "Select branch..." }, ...opts];
     }, [branches]);
 
@@ -207,6 +227,7 @@ export default function EmployeesPage() {
 
         return employees.filter((e) => {
             const branchName = e.branchName || e.branch?.branchName || "";
+
             return (
                 String(e.empCode || "").toLowerCase().includes(s) ||
                 String(e.fullName || "").toLowerCase().includes(s) ||
@@ -250,6 +271,7 @@ export default function EmployeesPage() {
     async function save() {
         const v = validateEmployee(form);
         setErrors(v);
+
         if (Object.keys(v).length) {
             setStatus("❌ Fix highlighted fields.");
             return;
@@ -257,7 +279,6 @@ export default function EmployeesPage() {
 
         const payload = {
             employeeId: mode === "edit" ? Number(form.employeeId) : null,
-            empCode: form.empCode.trim(),
             fullName: form.fullName.trim(),
             email: form.email.trim() || null,
             phone: form.phone.trim() || null,
@@ -265,6 +286,10 @@ export default function EmployeesPage() {
             branchId: Number(form.branchId),
             active: !!form.active,
         };
+
+        if (mode === "edit") {
+            payload.empCode = form.empCode;
+        }
 
         try {
             setSaving(true);
@@ -275,8 +300,6 @@ export default function EmployeesPage() {
                 setStatus("✅ Updated!");
             } else {
                 const res = await api.post(EMP_BASE, payload);
-
-                // your create endpoint returns APIResponse<Map<String,Object>> { tempPassword: "..." }
                 const data = unwrapApiResponse(res.data);
                 const tempPassword = data?.tempPassword;
 
@@ -366,7 +389,7 @@ export default function EmployeesPage() {
             )}
 
             <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] shadow-xl backdrop-blur-2xl">
-                <div className="hidden lg:block overflow-x-auto">
+                <div className="hidden overflow-x-auto lg:block">
                     <table className="w-full text-sm">
                         <thead className="bg-white/[0.03] text-slate-300">
                         <tr className="border-b border-white/10">
@@ -485,13 +508,22 @@ export default function EmployeesPage() {
             >
                 <div className="space-y-5">
                     <div className="grid gap-4 sm:grid-cols-2">
-                        <Field
-                            label="Employee Code"
-                            placeholder="EMP-001"
-                            value={form.empCode}
-                            onChange={(v) => setField("empCode", v)}
-                            error={errors.empCode}
-                        />
+                        {mode === "edit" ? (
+                            <Field
+                                label="Employee Code"
+                                value={form.empCode}
+                                readOnly
+                                disabled
+                            />
+                        ) : (
+                            <Field
+                                label="Employee Code"
+                                value="Auto-generated by system"
+                                readOnly
+                                disabled
+                            />
+                        )}
+
                         <Field
                             label="Full Name"
                             placeholder="Sandula Sanchana"

@@ -35,9 +35,54 @@ function getErrorMessage(err, fallback = "Request failed") {
         err?.response?.data?.data?.message;
 
     if (msgFromBackend) return msgFromBackend;
+
     const status = err?.response?.status;
     if (status) return `${fallback} (${status})`;
+
     return err?.message || fallback;
+}
+
+async function extractBlobErrorMessage(err, fallback = "Request failed") {
+    try {
+        const data = err?.response?.data;
+
+        if (data instanceof Blob) {
+            const text = await data.text();
+            const parsed = JSON.parse(text);
+
+            return (
+                parsed?.message ||
+                parsed?.msg ||
+                parsed?.data?.message ||
+                fallback
+            );
+        }
+    } catch {
+        // ignore blob parse failure
+    }
+
+    return getErrorMessage(err, fallback);
+}
+
+function buildReportPayload(filters, selectedEmployee) {
+    return {
+        dateFrom: filters.dateFrom,
+        dateTo: filters.dateTo,
+        employeeId: selectedEmployee?.employeeId ?? null,
+        branchId: filters.branchId ? Number(filters.branchId) : null,
+        status: filters.status,
+        source: filters.source,
+    };
+}
+
+function formatDateTime(value) {
+    if (!value) return "-";
+
+    try {
+        return new Date(value).toLocaleString();
+    } catch {
+        return value;
+    }
 }
 
 function StatCard({ title, value, subtitle, icon: Icon, tone = "slate" }) {
@@ -53,10 +98,12 @@ function StatCard({ title, value, subtitle, icon: Icon, tone = "slate" }) {
     const selectedTone = tones[tone] || tones.slate;
 
     return (
-        <div className={cn(
-            "relative overflow-hidden rounded-2xl border bg-slate-900/40 backdrop-blur-md p-5",
-            selectedTone.split(" ").pop()
-        )}>
+        <div
+            className={cn(
+                "relative overflow-hidden rounded-2xl border bg-slate-900/40 backdrop-blur-md p-5",
+                selectedTone.split(" ").pop()
+            )}
+        >
             <div className={cn("absolute inset-0 bg-gradient-to-br opacity-100", selectedTone)} />
             <div className="relative z-10 flex items-start justify-between">
                 <div>
@@ -123,6 +170,7 @@ function EmployeeLookupSelect({ value, onChange }) {
     async function searchEmployees(q) {
         if (!q.trim()) {
             setResults([]);
+            setOpen(false);
             return;
         }
 
@@ -134,6 +182,7 @@ function EmployeeLookupSelect({ value, onChange }) {
             setOpen(true);
         } catch {
             setResults([]);
+            setOpen(false);
         } finally {
             setSearching(false);
         }
@@ -216,6 +265,18 @@ export default function AdminAttendanceReportPage() {
 
     const today = new Date().toISOString().slice(0, 10);
 
+    const emptySummary = {
+        totalRecords: 0,
+        validCount: 0,
+        pendingCount: 0,
+        rejectedCount: 0,
+        checkInCount: 0,
+        checkOutCount: 0,
+        lateCount: 0,
+        earlyLeaveCount: 0,
+        overtimeCount: 0,
+    };
+
     const [filters, setFilters] = useState({
         dateFrom: today,
         dateTo: today,
@@ -225,20 +286,11 @@ export default function AdminAttendanceReportPage() {
     });
 
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-
     const [loading, setLoading] = useState(false);
+    const [exporting, setExporting] = useState(false);
+
     const [report, setReport] = useState({
-        summary: {
-            totalRecords: 0,
-            validCount: 0,
-            pendingCount: 0,
-            rejectedCount: 0,
-            checkInCount: 0,
-            checkOutCount: 0,
-            lateCount: 0,
-            earlyLeaveCount: 0,
-            overtimeCount: 0,
-        },
+        summary: emptySummary,
         rows: [],
     });
 
@@ -246,32 +298,16 @@ export default function AdminAttendanceReportPage() {
         try {
             setLoading(true);
 
-            const payload = {
-                dateFrom: filters.dateFrom,
-                dateTo: filters.dateTo,
-                employeeId: selectedEmployee?.employeeId ?? null,
-                branchId: filters.branchId ? Number(filters.branchId) : null,
-                status: filters.status,
-                source: filters.source,
-            };
-
+            const payload = buildReportPayload(filters, selectedEmployee);
             const res = await api.post(REPORT_BASE, payload);
             const data = unwrapApiResponse(res.data);
 
-            setReport(data || {
-                summary: {
-                    totalRecords: 0,
-                    validCount: 0,
-                    pendingCount: 0,
-                    rejectedCount: 0,
-                    checkInCount: 0,
-                    checkOutCount: 0,
-                    lateCount: 0,
-                    earlyLeaveCount: 0,
-                    overtimeCount: 0,
-                },
-                rows: [],
-            });
+            setReport(
+                data || {
+                    summary: emptySummary,
+                    rows: [],
+                }
+            );
         } catch (e) {
             toast({
                 title: "Report failed",
@@ -283,16 +319,75 @@ export default function AdminAttendanceReportPage() {
         }
     }
 
-    const summary = report?.summary || {};
+    async function exportCsv() {
+        try {
+            setExporting(true);
+
+            const payload = buildReportPayload(filters, selectedEmployee);
+
+            const res = await api.post(`${REPORT_BASE}/export/csv`, payload, {
+                responseType: "blob",
+            });
+
+            const blob = new Blob([res.data], { type: "text/csv;charset=utf-8;" });
+            const url = window.URL.createObjectURL(blob);
+
+            const fileName = `attendance-report-${filters.dateFrom}-to-${filters.dateTo}.csv`;
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.URL.revokeObjectURL(url);
+
+            toast({
+                title: "Export successful",
+                message: "CSV file downloaded successfully",
+                variant: "success",
+            });
+        } catch (e) {
+            const message = await extractBlobErrorMessage(e, "Failed to export CSV");
+
+            toast({
+                title: "Export failed",
+                message,
+                variant: "error",
+            });
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    function resetFilters() {
+        setFilters({
+            dateFrom: today,
+            dateTo: today,
+            branchId: "",
+            status: "",
+            source: "",
+        });
+        setSelectedEmployee(null);
+        setReport({
+            summary: emptySummary,
+            rows: [],
+        });
+    }
+
+    const summary = report?.summary || emptySummary;
     const rows = report?.rows || [];
 
     const branchOptions = useMemo(() => {
         const unique = new Map();
+
         rows.forEach((row) => {
             if (row.branchId != null && row.branchName) {
                 unique.set(row.branchId, row.branchName);
             }
         });
+
         return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
     }, [rows]);
 
@@ -305,16 +400,16 @@ export default function AdminAttendanceReportPage() {
                         <h1 className="text-3xl font-black tracking-tight text-white">Attendance Report</h1>
                     </div>
                     <p className="mt-2 text-sm text-slate-400">
-                        Filter, review, and prepare attendance records for export.
+                        Filter, review, and export attendance records as CSV.
                     </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                     <button
                         type="button"
                         onClick={fetchReport}
-                        disabled={loading}
-                        className="flex items-center gap-2 rounded-xl bg-white/5 border border-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 disabled:opacity-50"
+                        disabled={loading || exporting}
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                         Generate Report
@@ -322,10 +417,21 @@ export default function AdminAttendanceReportPage() {
 
                     <button
                         type="button"
-                        className="flex items-center gap-2 rounded-xl bg-indigo-500/15 border border-indigo-500/20 px-5 py-2.5 text-sm font-bold text-indigo-300 transition hover:bg-indigo-500/20"
+                        onClick={exportCsv}
+                        disabled={loading || exporting}
+                        className="flex items-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/15 px-5 py-2.5 text-sm font-bold text-indigo-300 transition hover:bg-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        <Download className="h-4 w-4" />
-                        Export
+                        {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        {exporting ? "Exporting..." : "Export CSV"}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={resetFilters}
+                        disabled={loading || exporting}
+                        className="flex items-center gap-2 rounded-xl border border-white/10 bg-transparent px-5 py-2.5 text-sm font-bold text-slate-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Reset
                     </button>
                 </div>
             </header>
@@ -419,16 +525,16 @@ export default function AdminAttendanceReportPage() {
 
             <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard title="Total Records" value={summary.totalRecords} subtitle="All matching attendance rows" icon={ClipboardList} tone="indigo" />
-                <StatCard title="Valid" value={summary.validCount} subtitle="Approved/valid entries" icon={UserCheck} tone="green" />
-                <StatCard title="Rejected" value={summary.rejectedCount} subtitle="Rejected entries" icon={UserX} tone="red" />
-                <StatCard title="Pending" value={summary.pendingCount} subtitle="Awaiting decision" icon={AlertTriangle} tone="yellow" />
-                <StatCard title="Check In" value={summary.checkInCount} subtitle="IN records" icon={CalendarDays} tone="indigo" />
-                <StatCard title="Check Out" value={summary.checkOutCount} subtitle="OUT records" icon={CalendarDays} tone="purple" />
+                <StatCard title="Valid" value={summary.validCount} subtitle="Approved attendance rows" icon={UserCheck} tone="green" />
+                <StatCard title="Rejected" value={summary.rejectedCount} subtitle="Rejected attendance rows" icon={UserX} tone="red" />
+                <StatCard title="Pending" value={summary.pendingCount} subtitle="Waiting for admin review" icon={AlertTriangle} tone="yellow" />
+                <StatCard title="Check In" value={summary.checkInCount} subtitle="IN attendance rows" icon={CalendarDays} tone="indigo" />
+                <StatCard title="Check Out" value={summary.checkOutCount} subtitle="OUT attendance rows" icon={CalendarDays} tone="purple" />
                 <StatCard title="Late Count" value={summary.lateCount} subtitle="Rows with late minutes" icon={Clock3} tone="yellow" />
                 <StatCard title="Overtime Count" value={summary.overtimeCount} subtitle="Rows with overtime minutes" icon={TimerReset} tone="slate" />
             </div>
 
-            <div className="mt-8 rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl overflow-hidden">
+            <div className="mt-8 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl">
                 <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
                     <div>
                         <h2 className="text-lg font-bold text-white">Attendance Records</h2>
@@ -478,16 +584,16 @@ export default function AdminAttendanceReportPage() {
                                         <div className="font-semibold text-white">{row.employeeCode}</div>
                                         <div className="text-xs text-slate-500">{row.employeeName}</div>
                                     </td>
-                                    <td className="px-6 py-4">{row.branchName}</td>
-                                    <td className="px-6 py-4">{row.type}</td>
+                                    <td className="px-6 py-4">{row.branchName || "-"}</td>
+                                    <td className="px-6 py-4">{row.type || "-"}</td>
                                     <td className="px-6 py-4">
-                                        <Badge tone={getSourceTone(row.source)}>{row.source}</Badge>
+                                        <Badge tone={getSourceTone(row.source)}>{row.source || "-"}</Badge>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <Badge tone={getStatusTone(row.status)}>{row.status}</Badge>
+                                        <Badge tone={getStatusTone(row.status)}>{row.status || "-"}</Badge>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {row.eventTime ? new Date(row.eventTime).toLocaleString() : "-"}
+                                    <td className="whitespace-nowrap px-6 py-4">
+                                        {formatDateTime(row.eventTime)}
                                     </td>
                                     <td className="px-6 py-4">{row.attendanceMark || "-"}</td>
                                     <td className="px-6 py-4">{row.lateMinutes ?? 0}</td>

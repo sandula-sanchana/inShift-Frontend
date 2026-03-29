@@ -8,7 +8,7 @@ import { useToast } from "../../components/ui/toast-store.js";
 import { api } from "../../lib/api.js";
 import { motion } from "framer-motion";
 import { ArrowRight, Info } from "lucide-react";
-// import { registerNotificationsForCurrentDevice } from "../../lib/registerNotifications"; // add later after FCM backend is ready
+// import { registerNotificationsForCurrentDevice } from "../../lib/registerNotifications";
 
 export default function Login() {
   const nav = useNavigate();
@@ -30,13 +30,16 @@ export default function Login() {
       const res = await api.post("/v1/auth/login", { email, password });
 
       const data = res?.data?.data;
+
       const accessToken = data?.accessToken ?? data?.access_token;
+      const refreshToken = data?.refreshToken ?? data?.refresh_token;
       const role = data?.role;
       const passwordMustChange = !!data?.passwordMustChange;
 
       if (!accessToken) throw new Error("Access token missing in response");
+      if (!refreshToken) throw new Error("Refresh token missing in response");
 
-      setSession(accessToken, {
+      setSession(accessToken, refreshToken, {
         email,
         role,
         passwordMustChange,
@@ -51,7 +54,6 @@ export default function Login() {
         return;
       }
 
-      // ✅ Enable later after FCM backend/token registration is ready
       // await registerNotificationsForCurrentDevice();
 
       toast({
