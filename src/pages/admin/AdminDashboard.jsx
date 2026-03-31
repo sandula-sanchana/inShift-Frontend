@@ -33,6 +33,7 @@ import AdminAttendanceRulesPage from "../../features/admin/AdminAttendanceRulesP
 import AdminPresenceChecksPage from "../../features/admin/AdminPresenceChecksPage.jsx";
 import AdminOvertime from "../../features/admin/AdminOvertime.jsx";
 import AdminAttendanceReportPage from "../../features/admin/AdminAttendanceReportPage.jsx";
+import AdminAiPatternScannerPage from "../../features/admin/AdminAiPatternScannerPage.jsx";
 
 const DASHBOARD_BASE = "/v1/admin/attendance/dashboard";
 
@@ -343,6 +344,7 @@ export default function AdminDashboard() {
             { to: "/admin/attendance", icon: CalendarClock, label: "Attendance" },
             { to: "/admin/attendance-corrections", icon: ClipboardList, label: "Corrections" },
             { to: "/admin/intelligence", icon: ShieldCheck, label: "Intelligence" },
+            { to: "/admin/ai-pattern-scanner", icon: ShieldCheck, label: "AI Pattern Scanner" },
             { to: "/admin/presence-checks", icon: ShieldCheck, label: "Presence Checks" },
             { to: "/admin/attendance-rules", icon: Settings, label: "Attendance Rules" },
             { to: "/admin/shifts", icon: Clock3, label: "Shift Settings" },
@@ -454,13 +456,13 @@ export default function AdminDashboard() {
                                     <Route path="attendance" element={<AdminAttendancePage />} />
                                     <Route path="attendance-corrections" element={<AttendanceCorrectionsPage />} />
                                     <Route path="intelligence" element={<AttendanceIntelligencePage />} />
+                                    <Route path="ai-pattern-scanner" element={<AdminAiPatternScannerPage />} />
                                     <Route path="presence-checks" element={<AdminPresenceChecksPage />} />
                                     <Route path="attendance-rules" element={<AdminAttendanceRulesPage />} />
                                     <Route path="shifts" element={<ShiftSettingsPage />} />
                                     <Route path="overtime" element={<AdminOvertime />} />
                                     <Route path="device-enrollment" element={<AdminDeviceEnrollmentRequestsPage />} />
                                     <Route path="attendance-report" element={<AdminAttendanceReportPage />} />
-
                                     <Route path="*" element={<Navigate to="/admin" replace />} />
                                 </Routes>
                             </div>

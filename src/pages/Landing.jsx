@@ -53,12 +53,16 @@ function Section({ id, className = "", children }) {
 
 function FeatureCard({ icon, title, desc }) {
   return (
-      <div className="group rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7
+      <div
+          className="group rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl p-7
                     transition duration-300 hover:-translate-y-1 hover:bg-white/10
-                    hover:shadow-[0_20px_80px_rgba(99,102,241,0.18)]">
+                    hover:shadow-[0_20px_80px_rgba(99,102,241,0.18)]"
+      >
         <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10
-                        transition group-hover:scale-105 group-hover:bg-white/15">
+          <div
+              className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/10
+                        transition group-hover:scale-105 group-hover:bg-white/15"
+          >
             {icon}
           </div>
           <div>
@@ -188,35 +192,28 @@ export default function Landing() {
   }
 
   return (
-      // FIX 1: Removed 'bg-slate-950' from here. It is handled in the fixed background layer now.
       <div
           className="relative min-h-screen overflow-hidden text-white selection:bg-indigo-500/30"
           onMouseMove={onMove}
           onMouseLeave={() => setCursor({ x: -9999, y: -9999 })}
       >
-        {/* FIX 2: Background System
-        Using 'fixed' to ensure it stays in place and explicit z-index layering.
-      */}
         <div className="fixed inset-0 -z-50 pointer-events-none">
-
-          {/* Layer 1: Solid Background Color */}
           <div className="absolute inset-0 bg-slate-950" />
 
-          {/* Layer 2: Animated Blobs (Using Motion for reliability) */}
           <motion.div
               animate={{
                 scale: [1, 1.1, 1],
                 rotate: [0, 5, -5, 0],
-                opacity: [0.4, 0.6, 0.4] // Increased opacity
+                opacity: [0.4, 0.6, 0.4],
               }}
               transition={{
                 duration: 12,
                 repeat: Infinity,
-                ease: "easeInOut"
+                ease: "easeInOut",
               }}
               className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full mix-blend-screen filter blur-[80px] opacity-40"
               style={{
-                background: "radial-gradient(circle, rgba(99,102,241,0.5) 0%, rgba(99,102,241,0) 70%)"
+                background: "radial-gradient(circle, rgba(99,102,241,0.5) 0%, rgba(99,102,241,0) 70%)",
               }}
           />
 
@@ -224,17 +221,17 @@ export default function Landing() {
               animate={{
                 scale: [1, 1.2, 1],
                 x: [0, 50, 0],
-                opacity: [0.3, 0.5, 0.3]
+                opacity: [0.3, 0.5, 0.3],
               }}
               transition={{
                 duration: 15,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: 1
+                delay: 1,
               }}
               className="absolute top-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full mix-blend-screen filter blur-[80px] opacity-30"
               style={{
-                background: "radial-gradient(circle, rgba(34,211,238,0.4) 0%, rgba(34,211,238,0) 70%)"
+                background: "radial-gradient(circle, rgba(34,211,238,0.4) 0%, rgba(34,211,238,0) 70%)",
               }}
           />
 
@@ -242,30 +239,28 @@ export default function Landing() {
               animate={{
                 scale: [1, 1.3, 1],
                 y: [0, -30, 0],
-                opacity: [0.3, 0.5, 0.3]
+                opacity: [0.3, 0.5, 0.3],
               }}
               transition={{
                 duration: 18,
                 repeat: Infinity,
                 ease: "easeInOut",
-                delay: 2
+                delay: 2,
               }}
               className="absolute -bottom-[20%] left-[20%] w-[60vw] h-[60vw] rounded-full mix-blend-screen filter blur-[80px] opacity-30"
               style={{
-                background: "radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(168,85,247,0) 70%)"
+                background: "radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(168,85,247,0) 70%)",
               }}
           />
 
-          {/* Layer 3: Grid Overlay */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:72px_72px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
         </div>
 
-        {/* Mouse Follower (Spotlight) */}
         <motion.div
             className="pointer-events-none fixed -z-40 h-[600px] w-[600px] rounded-full"
             animate={{
               x: cursor.x - 300,
-              y: cursor.y - 300
+              y: cursor.y - 300,
             }}
             transition={{ type: "spring", damping: 30, stiffness: 200, mass: 0.5 }}
             style={{
@@ -273,16 +268,12 @@ export default function Landing() {
             }}
         />
 
-        {/* --- CONTENT START --- */}
-
         <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/55 backdrop-blur-xl">
           <Shell>
             <div className="flex items-center justify-between py-4">
               <Link to="/" className="flex items-center gap-3">
                 <LogoMark />
-                <div className="leading-tight">
-                  {/* <div className="text-sm font-semibold text-white">InShift</div> */}
-                </div>
+                <div className="leading-tight"></div>
               </Link>
 
               <nav className="hidden md:flex items-center gap-6 text-sm text-slate-200">
@@ -293,7 +284,11 @@ export default function Landing() {
 
               <div className="flex items-center gap-2">
                 <Link to="/login">
-                  <Button variant="ghost">Login</Button>
+                  <Button
+                      className="bg-transparent text-slate-200 hover:bg-white/10 hover:text-white border border-transparent shadow-none"
+                  >
+                    Login
+                  </Button>
                 </Link>
                 <Link to="/register">
                   <Button className="bg-indigo-600 hover:bg-indigo-500 text-white">
@@ -344,7 +339,7 @@ export default function Landing() {
                   </Button>
                 </Link>
                 <a href="#workflow">
-                  <Button className="bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15 px-8 py-6 text-lg rounded-2xl">
+                  <Button className="bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15 px-8 py-6 text-lg rounded-2xl shadow-none">
                     See how it works <ChevronRight className="h-4 w-4" />
                   </Button>
                 </a>
@@ -609,10 +604,7 @@ export default function Landing() {
                     </Button>
                   </Link>
                   <Link to="/login">
-                    <Button
-                        variant="secondary"
-                        className="px-7 py-5 text-lg rounded-2xl"
-                    >
+                    <Button className="bg-white/10 text-white ring-1 ring-white/15 hover:bg-white/15 px-7 py-5 text-lg rounded-2xl shadow-none">
                       Go to dashboard
                     </Button>
                   </Link>
