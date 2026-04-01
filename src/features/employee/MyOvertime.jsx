@@ -30,8 +30,8 @@ function ToneBadge({ children, tone = "slate" }) {
 
     return (
         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${tones[tone] || tones.slate}`}>
-      {children}
-    </span>
+            {children}
+        </span>
     );
 }
 
@@ -50,6 +50,9 @@ function getStatusTone(status) {
         case "SWAP_PENDING":
         case "PENDING":
             return "amber";
+        case "OT_OVER":
+        case "IN_PROGRESS":
+            return "cyan";
         default:
             return "slate";
     }
@@ -186,7 +189,7 @@ export default function MyOvertime() {
 
     const stats = useMemo(() => {
         const total = assignments.length;
-        const needAction = assignments.filter((a) => a.status === "ASSIGNED").length;
+        const needAction = assignments.filter((a) => a.canAccept || a.canDecline).length;
         const accepted = assignments.filter((a) => a.status === "ACCEPTED").length;
         const swaps = incomingSwaps.filter((s) => s.status === "PENDING").length;
         return { total, needAction, accepted, swaps };
@@ -354,8 +357,10 @@ export default function MyOvertime() {
                             </div>
                         ) : (
                             assignments.map((item) => {
-                                const canAcceptOrDecline = item.status === "ASSIGNED";
-                                const canSwap = item.status === "ASSIGNED" || item.status === "ACCEPTED";
+                                const canAccept = item.canAccept === true;
+                                const canDecline = item.canDecline === true;
+                                const canSwap = item.canSwap === true;
+                                const badgeStatus = item.displayStatus || item.status;
 
                                 return (
                                     <div
@@ -365,7 +370,7 @@ export default function MyOvertime() {
                                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                                             <div className="space-y-3">
                                                 <div className="flex flex-wrap gap-2">
-                                                    <ToneBadge tone={getStatusTone(item.status)}>{item.status}</ToneBadge>
+                                                    <ToneBadge tone={getStatusTone(badgeStatus)}>{badgeStatus}</ToneBadge>
                                                     <ToneBadge tone="indigo">{formatDate(item.otDate)}</ToneBadge>
                                                 </div>
 
@@ -399,32 +404,44 @@ export default function MyOvertime() {
                                                         <div className="mt-2 leading-6">{item.employeeResponseNote}</div>
                                                     </div>
                                                 )}
+
+                                                {item.otOver && (
+                                                    <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-sm text-cyan-300">
+                                                        This overtime assignment is over. No further actions are allowed.
+                                                    </div>
+                                                )}
+
+                                                {item.otStarted && !item.otOver && (
+                                                    <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-4 text-sm text-cyan-300">
+                                                        This overtime assignment is currently in progress.
+                                                    </div>
+                                                )}
                                             </div>
 
                                             <div className="flex flex-wrap gap-3 lg:w-[260px] lg:flex-col">
-                                                {canAcceptOrDecline && (
-                                                    <>
-                                                        <Button
-                                                            onClick={() => acceptOvertime(item.id)}
-                                                            disabled={submittingId === item.id}
-                                                        >
-                                                            {submittingId === item.id ? (
-                                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                            ) : (
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                            )}
-                                                            Accept
-                                                        </Button>
+                                                {canAccept && (
+                                                    <Button
+                                                        onClick={() => acceptOvertime(item.id)}
+                                                        disabled={submittingId === item.id}
+                                                    >
+                                                        {submittingId === item.id ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <CheckCircle2 className="h-4 w-4" />
+                                                        )}
+                                                        Accept
+                                                    </Button>
+                                                )}
 
-                                                        <Button
-                                                            variant="secondary"
-                                                            onClick={() => openDecline(item)}
-                                                            disabled={submittingId === item.id}
-                                                        >
-                                                            <XCircle className="h-4 w-4" />
-                                                            Decline
-                                                        </Button>
-                                                    </>
+                                                {canDecline && (
+                                                    <Button
+                                                        variant="secondary"
+                                                        onClick={() => openDecline(item)}
+                                                        disabled={submittingId === item.id}
+                                                    >
+                                                        <XCircle className="h-4 w-4" />
+                                                        Decline
+                                                    </Button>
                                                 )}
 
                                                 {canSwap && (
